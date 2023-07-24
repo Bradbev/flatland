@@ -11,9 +11,16 @@ import (
 	"fmt"
 	"io/fs"
 	"reflect"
+	"strings"
 
 	"golang.org/x/exp/slices"
 )
+
+type AssetDescriptor struct {
+	Name     string
+	FullName string
+	Create   FactoryFunc
+}
 
 type Asset interface{}
 type PostLoadingAsset interface {
@@ -23,6 +30,8 @@ type PostLoadingAsset interface {
 type PreSavingAsset interface {
 	PreSave()
 }
+
+type FactoryFunc func() (Asset, error)
 
 func RegisterFileSystem(filesystem fs.FS, priority int) error {
 	wrapped := &fsWrapper{FileSystem: filesystem, Priority: priority}
@@ -34,16 +43,16 @@ func RegisterWritableFileSystem(filesystem WriteableFileSystem) error {
 	return nil
 }
 
-func RegisterAssetFactory(zeroAsset any, factoryFunction func() Asset) {
+func RegisterAssetFactory(zeroAsset any, factoryFunction FactoryFunc) {
 	assetManager.RegisterAssetFactory(zeroAsset, factoryFunction)
 }
 
 func RegisterAsset(zeroAsset any) bool {
 	zeroType := reflect.TypeOf(zeroAsset)
 
-	assetManager.RegisterAssetFactory(zeroAsset, func() Asset {
+	assetManager.RegisterAssetFactory(zeroAsset, func() (Asset, error) {
 		zero := reflect.New(zeroType)
-		return zero.Interface().(Asset)
+		return zero.Interface().(Asset), nil
 	})
 	return true
 }
@@ -62,13 +71,17 @@ func Load(assetPath string) (Asset, error) {
 	container := assetContainer{}
 	err = json.Unmarshal(data, &container)
 
-	factory, ok := assetManager.AssetFactories[container.Type]
+	assetDescriptor, ok := assetManager.AssetDescriptors[container.Type]
 	if !ok {
 		return nil, fmt.Errorf("Unknown asset '%s' - is type registered?", container.Type)
 	}
-	obj := factory()
+	obj, err := assetDescriptor.Create()
 
-	TType := ObjectTypeName(obj)
+	if err != nil {
+		return nil, err
+	}
+
+	_, TType := ObjectTypeName(obj)
 	//println("TType ", TType)
 	if TType != container.Type {
 		return nil, fmt.Errorf("Load type mismatch.  Wanted %s, loaded %s", TType, container.Type)
@@ -93,16 +106,20 @@ func Reset() {
 	assetManager = newAssetManagerImpl()
 }
 
-func ObjectTypeName(obj any) string {
+func ListAssets() []*AssetDescriptor {
+	return assetManager.AssetDescriptorList
+}
+
+func ObjectTypeName(obj any) (name string, fullname string) {
 	return TypeName(reflect.TypeOf(obj))
 }
 
-func TypeName(t reflect.Type) string {
+func TypeName(t reflect.Type) (name string, fullname string) {
 	if t.Kind() == reflect.Pointer {
 		t = t.Elem()
 	}
 
-	return t.PkgPath() + "." + t.Name()
+	return t.Name(), t.PkgPath() + "." + t.Name()
 }
 
 type testAsset struct {
@@ -119,9 +136,10 @@ type assetContainer struct {
 }
 
 type assetManagerImpl struct {
-	FileSystems    []*fsWrapper
-	AssetFactories map[string]func() Asset
-	WriteFS        WriteableFileSystem
+	FileSystems         []*fsWrapper
+	AssetDescriptors    map[string]*AssetDescriptor
+	AssetDescriptorList []*AssetDescriptor
+	WriteFS             WriteableFileSystem
 }
 
 type fsWrapper struct {
@@ -133,8 +151,8 @@ var assetManager = newAssetManagerImpl()
 
 func newAssetManagerImpl() *assetManagerImpl {
 	return &assetManagerImpl{
-		FileSystems:    []*fsWrapper{},
-		AssetFactories: map[string]func() Asset{},
+		FileSystems:      []*fsWrapper{},
+		AssetDescriptors: map[string]*AssetDescriptor{},
 	}
 }
 
@@ -156,10 +174,19 @@ func (a *assetManagerImpl) ReadFile(path string) ([]byte, error) {
 	return nil, fmt.Errorf("Unable to find path (%s) in any registered FS ", path)
 }
 
-func (a *assetManagerImpl) RegisterAssetFactory(zeroAsset any, factoryFunction func() Asset) {
-	typeName := ObjectTypeName(zeroAsset)
+func (a *assetManagerImpl) RegisterAssetFactory(zeroAsset any, factoryFunction FactoryFunc) {
+	name, typeName := ObjectTypeName(zeroAsset)
 	println("Registered asset ", typeName)
-	a.AssetFactories[typeName] = factoryFunction
+	descriptor := &AssetDescriptor{
+		Name:     name,
+		FullName: typeName,
+		Create:   factoryFunction,
+	}
+	a.AssetDescriptors[typeName] = descriptor
+	a.AssetDescriptorList = append(a.AssetDescriptorList, descriptor)
+	slices.SortFunc(a.AssetDescriptorList, func(a, b *AssetDescriptor) bool {
+		return strings.Compare(a.Name, b.Name) == -1
+	})
 }
 
 type saveableAssetContainer struct {
@@ -171,8 +198,9 @@ func (a *assetManagerImpl) Save(path string, toSave Asset) error {
 	if assetManager.WriteFS == nil {
 		return fmt.Errorf("Can't Save asset - no writable FS")
 	}
+	_, fullname := ObjectTypeName(toSave)
 	container := saveableAssetContainer{
-		Type:  ObjectTypeName(toSave),
+		Type:  fullname,
 		Inner: toSave,
 	}
 	data, err := json.MarshalIndent(container, "", " ")

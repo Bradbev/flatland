@@ -22,7 +22,7 @@ func (t *testEditorImpl) FieldName(string)   {}
 
 func TestGenericEdit(t *testing.T) {
 	e := editor.NewTypeEditor(&testEditorImpl{})
-	//f := float64(45)
+	f := float64(45)
 
 	e.AddType(new(float64), func(types *editor.TypeEditor, v reflect.Value) error {
 		assert.Equal(t, 45.0, v.Float())
@@ -30,8 +30,8 @@ func TestGenericEdit(t *testing.T) {
 		return nil
 	})
 
-	//e.Edit(&f)
-	//assert.Equal(t, 34.0, f)
+	e.Edit(&f)
+	assert.Equal(t, 34.0, f)
 
 	tf := &testReflect{F64: 45.0}
 	e.Edit(tf)

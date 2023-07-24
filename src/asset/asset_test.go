@@ -44,7 +44,7 @@ func TestAssetLoad(t *testing.T) {
 	})
 	testAssetLoad(func() {
 		t.Log("Testing RegisterAssetFactory")
-		asset.RegisterAssetFactory(testAsset{}, func() asset.Asset { return &testAsset{} })
+		asset.RegisterAssetFactory(testAsset{}, func() (asset.Asset, error) { return &testAsset{}, nil })
 	})
 }
 
@@ -95,4 +95,13 @@ func TestAssetSave(t *testing.T) {
 
 	expectedObj := &testAsset{Anykey: "saved", postLoadCalled: true}
 	assert.Equal(t, expectedObj, loaded)
+}
+
+func TestAssetList(t *testing.T) {
+	defer asset.Reset()
+	asset.RegisterAsset(testAsset{})
+
+	expected := []string{"flatland/src/asset_test.testAsset"}
+	assets := asset.ListAssets()
+	assert.Equal(t, expected, assets, "Arrays don't match")
 }

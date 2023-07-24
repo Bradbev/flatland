@@ -20,9 +20,9 @@ func main() {
 	ebiten.SetWindowResizable(true)
 
 	gg := &G{
-		mgr:     mgr,
-		dscale:  ebiten.DeviceScaleFactor(),
-		editors: editor.Default(),
+		mgr:    mgr,
+		dscale: ebiten.DeviceScaleFactor(),
+		ed:     editor.NewImguiEditor(),
 	}
 
 	ebiten.RunGame(gg)
@@ -52,7 +52,7 @@ type G struct {
 	retina         bool
 	w, h           int
 
-	editors *editor.TypeEditor
+	ed *editor.ImguiEditor
 }
 
 func (g *G) Draw(screen *ebiten.Image) {
@@ -67,17 +67,24 @@ func (g *G) Update() error {
 	}
 	g.mgr.BeginFrame()
 	{
-		imgui.Checkbox("Retina", &g.retina)              // Edit bools storing our window open/close state
-		imgui.Checkbox("Demo Window", &g.showDemoWindow) // Edit bools storing our window open/close state
-
-		g.editors.Edit(&test)
-
-		if g.showDemoWindow {
-			imgui.ShowDemoWindow(&g.showDemoWindow)
-		}
+		g.ed.Update(1.0 / float32(ebiten.ActualTPS()))
+		g.debugWindow()
 	}
 	g.mgr.EndFrame()
 	return nil
+}
+
+func (g *G) debugWindow() {
+	defer imgui.End()
+	if !imgui.Begin("Debug") {
+		return
+	}
+	imgui.Checkbox("Retina", &g.retina)              // Edit bools storing our window open/close state
+	imgui.Checkbox("Demo Window", &g.showDemoWindow) // Edit bools storing our window open/close state
+
+	if g.showDemoWindow {
+		imgui.ShowDemoWindow(&g.showDemoWindow)
+	}
 }
 
 func lerp(a, b, t float64) float64 {

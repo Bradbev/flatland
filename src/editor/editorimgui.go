@@ -1,9 +1,9 @@
 package editor
 
 import (
+	"flatland/src/asset"
 	"fmt"
 	"io/fs"
-	"os"
 	"path/filepath"
 	"reflect"
 	"strings"
@@ -30,7 +30,7 @@ func (e *imguiEditorImpl) FieldName(name string) {
 	imgui.TableNextColumn()
 }
 
-func ImguiTypeEditor() *TypeEditor {
+func ImguiTypeEditor() *CommonEditor {
 	ed := NewTypeEditor(&imguiEditorImpl{})
 	ed.AddType(new(float32), float32Edit)
 	ed.AddType(new(float64), float64Edit)
@@ -40,7 +40,7 @@ func ImguiTypeEditor() *TypeEditor {
 	return ed
 }
 
-func structEd(types *TypeEditor, value reflect.Value) error {
+func structEd(types *CommonEditor, value reflect.Value) error {
 	t := value.Type()
 	if t.Kind() != reflect.Struct {
 		logger.Fatalf("Not a struct - %v", t.Kind())
@@ -66,7 +66,7 @@ func withID(value reflect.Value, body func()) {
 	body()
 }
 
-func float32Edit(types *TypeEditor, value reflect.Value) error {
+func float32Edit(types *CommonEditor, value reflect.Value) error {
 	withID(value, func() {
 		addr := value.Addr().Interface().(*float32)
 		imgui.DragFloat("", addr)
@@ -74,7 +74,7 @@ func float32Edit(types *TypeEditor, value reflect.Value) error {
 	return nil
 }
 
-func float64Edit(types *TypeEditor, value reflect.Value) error {
+func float64Edit(types *CommonEditor, value reflect.Value) error {
 	withID(value, func() {
 		f32 := float32(value.Float())
 		imgui.DragFloat("", &f32)
@@ -83,7 +83,7 @@ func float64Edit(types *TypeEditor, value reflect.Value) error {
 	return nil
 }
 
-func boolEdit(types *TypeEditor, value reflect.Value) error {
+func boolEdit(types *CommonEditor, value reflect.Value) error {
 	withID(value, func() {
 		addr := value.Addr().Interface().(*bool)
 		imgui.Checkbox("", addr)
@@ -91,7 +91,7 @@ func boolEdit(types *TypeEditor, value reflect.Value) error {
 	return nil
 }
 
-func stringEdit(types *TypeEditor, value reflect.Value) error {
+func stringEdit(types *CommonEditor, value reflect.Value) error {
 	withID(value, func() {
 		addr := value.Addr().Interface().(*string)
 		imgui.InputText("", addr)
@@ -99,7 +99,7 @@ func stringEdit(types *TypeEditor, value reflect.Value) error {
 	return nil
 }
 
-func intEdit(types *TypeEditor, value reflect.Value) error {
+func intEdit(types *CommonEditor, value reflect.Value) error {
 	withID(value, func() {
 		i32 := int32(value.Int())
 		imgui.InputInt("", &i32)
@@ -108,18 +108,20 @@ func intEdit(types *TypeEditor, value reflect.Value) error {
 	return nil
 }
 
+const errorModalID = "ErrorModal##unique"
+
 type ImguiEditor struct {
-	typeEditor  *TypeEditor
-	contentPath string
-	fsys        fs.FS
+	commonEditor   *CommonEditor
+	contentPath    string
+	fsys           fs.FS
+	errorModalText string
 }
 
 func NewImguiEditor() *ImguiEditor {
 	ret := &ImguiEditor{
-		typeEditor:  ImguiTypeEditor(),
-		contentPath: "./content",
-		fsys:        os.DirFS("./content"),
+		commonEditor: ImguiTypeEditor(),
 	}
+
 	return ret
 }
 
@@ -130,8 +132,13 @@ type fswalk struct {
 }
 
 func (e *ImguiEditor) Update(deltaseconds float32) error {
+	e.contentWindow()
+	return nil
+}
+
+func (e *ImguiEditor) contentWindow() error {
 	defer imgui.End()
-	if !imgui.Begin("EditorMainWindow") {
+	if !imgui.Begin("Content Browser") {
 		return nil
 	}
 	if imgui.Button("Add") {
@@ -141,7 +148,25 @@ func (e *ImguiEditor) Update(deltaseconds float32) error {
 
 	cache := e.buildFileCache()
 	e.walkCache(cache)
+
 	return nil
+}
+
+func (e *ImguiEditor) raiseError(err error) {
+	e.errorModalText = err.Error()
+	imgui.OpenPopup(errorModalID)
+}
+
+func (e *ImguiEditor) displayErrorModal() {
+	open := true
+	if imgui.BeginPopupModalV(errorModalID, &open, imgui.WindowFlagsAlwaysAutoResize) {
+		defer imgui.EndPopup()
+		imgui.Text(e.errorModalText)
+		if imgui.Button("Dismiss") {
+			e.errorModalText = ""
+			imgui.CloseCurrentPopup()
+		}
+	}
 }
 
 func (e *ImguiEditor) buildFileCache() *fswalk {
@@ -152,7 +177,7 @@ func (e *ImguiEditor) buildFileCache() *fswalk {
 		return stack[len(stack)-1]
 	}
 
-	fs.WalkDir(e.fsys, ".", func(path string, d fs.DirEntry, err error) error {
+	fs.WalkDir(e.commonEditor.fsysRead, ".", func(path string, d fs.DirEntry, err error) error {
 		if path == "." {
 			return nil
 		}
@@ -193,12 +218,33 @@ func (e *ImguiEditor) walkCache(node *fswalk) {
 }
 
 func (e *ImguiEditor) drawAddAssetModal() {
-	if imgui.BeginPopupModal("AddAssetModal") {
+	open := true
+	if imgui.BeginPopupModalV("AddAssetModal", &open, imgui.WindowFlagsAlwaysAutoResize) {
 		defer imgui.EndPopup()
-		imgui.TreeNodeV("List here",
-			imgui.TreeNodeFlagsLeaf|imgui.TreeNodeFlagsNoTreePushOnOpen)
-		if imgui.IsItemClicked() {
-			println("click")
+		defer e.displayErrorModal()
+
+		/*
+			if imgui.Button("another") {
+				imgui.OpenPopup("Test")
+			e.raiseError(fmt.Errorf("test err"))
+			}
+			if imgui.BeginPopupModal("Test") {
+				imgui.Text("inner modal")
+				imgui.EndPopup()
+			}
+		*/
+
+		for _, a := range asset.ListAssets() {
+			imgui.TreeNodeV(a.Name,
+				imgui.TreeNodeFlagsLeaf|imgui.TreeNodeFlagsNoTreePushOnOpen)
+			if imgui.IsItemClicked() {
+				obj, err := a.Create()
+				_ = err
+				err = asset.Save("test", obj)
+				if err != nil {
+					e.raiseError(err)
+				}
+			}
 		}
 	}
 }

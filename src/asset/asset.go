@@ -203,9 +203,12 @@ func (a *assetManagerImpl) Save(path string, toSave Asset) error {
 		Type:  fullname,
 		Inner: toSave,
 	}
-	data, err := json.MarshalIndent(container, "", " ")
+	data, err := json.MarshalIndent(container, "", "  ")
 	if err != nil {
 		return err
+	}
+	if !strings.HasSuffix(path, ".json") {
+		path = path + ".json"
 	}
 	return assetManager.WriteFS.WriteFile(path, data)
 }

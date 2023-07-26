@@ -1,6 +1,7 @@
 package main
 
 import (
+	"flatland/src/asset"
 	"flatland/src/editor"
 	"fmt"
 
@@ -25,7 +26,13 @@ func main() {
 		ed:     editor.NewImguiEditor(),
 	}
 
+	asset.RegisterAsset(editTest{})
+
 	ebiten.RunGame(gg)
+}
+
+type nestedIndirect struct {
+	NestedStr string
 }
 
 type editTest struct {
@@ -40,6 +47,7 @@ type editTest struct {
 		NestedFloat  float32
 		NestedFloat2 float32
 	}
+	NestedIndirect nestedIndirect
 }
 
 var test editTest

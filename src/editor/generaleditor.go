@@ -6,17 +6,23 @@ package editor
 
 import (
 	"flatland/src/asset"
+	"io/fs"
 	"log"
+	"os"
+	"path/filepath"
 	"reflect"
 )
 
 var logger = log.Default()
 
-type TypeEditorFn func(*TypeEditor, reflect.Value) error
+type TypeEditorFn func(*CommonEditor, reflect.Value) error
 
-type TypeEditor struct {
+type CommonEditor struct {
 	typeEditors map[string]TypeEditorFn
 	impl        EditorImpl
+	contentPath string
+	fsysRead    fs.FS
+	fsysWrite   asset.WriteableFileSystem
 }
 
 type EditorImpl interface {
@@ -25,37 +31,56 @@ type EditorImpl interface {
 	FieldName(name string)
 }
 
-func NewTypeEditor(impl EditorImpl) *TypeEditor {
-	return &TypeEditor{
+type editorWriteFS struct {
+	base string
+}
+
+func (e *editorWriteFS) WriteFile(path string, data []byte) error {
+	return os.WriteFile(filepath.Join(e.base, path), data, 0777)
+}
+
+func WriteFS(base string) asset.WriteableFileSystem {
+	return &editorWriteFS{base: base}
+}
+
+func NewTypeEditor(impl EditorImpl) *CommonEditor {
+	path := "./content"
+	ret := &CommonEditor{
 		typeEditors: map[string]TypeEditorFn{},
 		impl:        impl,
+		contentPath: path,
+		fsysRead:    os.DirFS(path),
+		fsysWrite:   WriteFS(path),
 	}
+	asset.RegisterFileSystem(ret.fsysRead, 0)
+	asset.RegisterWritableFileSystem(ret.fsysWrite)
+	return ret
 }
 
-func (t *TypeEditor) AddType(typeToAdd any, edit TypeEditorFn) {
-	toAdd := asset.ObjectTypeName(typeToAdd)
-	t.typeEditors[toAdd] = edit
+func (t *CommonEditor) AddType(typeToAdd any, edit TypeEditorFn) {
+	_, fullName := asset.ObjectTypeName(typeToAdd)
+	t.typeEditors[fullName] = edit
 }
 
-func (t *TypeEditor) Edit(obj any) {
+func (t *CommonEditor) Edit(obj any) {
 	value := reflect.ValueOf(obj)
 	t.EditValue(value)
 }
 
-func (t *TypeEditor) EditValue(value reflect.Value) {
-	valueType := asset.TypeName(value.Type())
+func (t *CommonEditor) EditValue(value reflect.Value) {
+	_, fullName := asset.TypeName(value.Type())
 	if value.Kind() != reflect.Pointer {
 		logger.Panicf("Value %v is not a pointer, this is a programming error", value)
 	}
 	// Get at the value being pointed to
 	value = value.Elem()
-	edFn := t.typeEditors[valueType]
+	edFn := t.typeEditors[fullName]
 	if edFn == nil && value.Kind() == reflect.Struct {
 		edFn = structEd
 	}
 
 	if edFn == nil {
-		logger.Printf("No editor for %s", valueType)
+		logger.Printf("No editor for %s", fullName)
 		return
 	}
 	if !value.CanSet() {

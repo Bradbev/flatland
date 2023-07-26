@@ -24,7 +24,7 @@ func TestGenericEdit(t *testing.T) {
 	e := editor.NewTypeEditor(&testEditorImpl{})
 	f := float64(45)
 
-	e.AddType(new(float64), func(types *editor.TypeEditor, v reflect.Value) error {
+	e.AddType(new(float64), func(types *editor.CommonEditor, v reflect.Value) error {
 		assert.Equal(t, 45.0, v.Float())
 		v.SetFloat(34)
 		return nil

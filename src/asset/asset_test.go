@@ -105,3 +105,17 @@ func TestAssetList(t *testing.T) {
 	assets := asset.ListAssets()
 	assert.Equal(t, expected, assets, "Arrays don't match")
 }
+func TestAssetCreate(t *testing.T) {
+	defer asset.Reset()
+	asset.RegisterAsset(testAsset{})
+
+	allAssets := asset.ListAssets()
+
+	obj, err := allAssets[0].Create()
+	assert.NoError(t, err)
+
+	_, ok := obj.(*testAsset)
+
+	assert.True(t, ok)
+
+}

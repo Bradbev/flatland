@@ -17,4 +17,5 @@ to be a link to another raw file.
 
 # Editor
 ### Editor does not depend on the game
-Compiling editor with the game isn't needed when the reflection is asset based.
+The editor code will need to depend on assets and custom asset editors, the game
+exe should not include editor code.

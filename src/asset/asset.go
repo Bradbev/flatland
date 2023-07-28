@@ -62,43 +62,10 @@ func ReadFile(assetPath string) ([]byte, error) {
 }
 
 func Load(assetPath string) (Asset, error) {
-
-	data, err := assetManager.ReadFile(assetPath)
-	if err != nil {
-		return nil, err
-	}
-
-	container := assetContainer{}
-	err = json.Unmarshal(data, &container)
-
-	assetDescriptor, ok := assetManager.AssetDescriptors[container.Type]
-	if !ok {
-		return nil, fmt.Errorf("Unknown asset '%s' - is type registered?", container.Type)
-	}
-	obj, err := assetDescriptor.Create()
-
-	if err != nil {
-		return nil, err
-	}
-
-	_, TType := ObjectTypeName(obj)
-	//println("TType ", TType)
-	if TType != container.Type {
-		return nil, fmt.Errorf("Load type mismatch.  Wanted %s, loaded %s", TType, container.Type)
-	}
-
-	err = json.Unmarshal(container.Inner, obj)
-	//fmt.Printf("%v %#v\n", reflect.TypeOf(obj).Name(), obj)
-	if postLoad, ok := obj.(PostLoadingAsset); ok {
-		postLoad.PostLoad()
-	}
-	return obj, err
+	return assetManager.Load(assetPath)
 }
 
 func Save(path string, toSave Asset) error {
-	if assetManager.WriteFS == nil {
-		return fmt.Errorf("Can't Save asset - no writable FS")
-	}
 	return assetManager.Save(path, toSave)
 }
 
@@ -122,14 +89,6 @@ func TypeName(t reflect.Type) (name string, fullname string) {
 	return t.Name(), t.PkgPath() + "." + t.Name()
 }
 
-type testAsset struct {
-	Saved int
-}
-
-type TestAsset struct {
-	Inner testAsset
-}
-
 type assetContainer struct {
 	Type  string
 	Inner json.RawMessage
@@ -140,6 +99,14 @@ type assetManagerImpl struct {
 	AssetDescriptors    map[string]*AssetDescriptor
 	AssetDescriptorList []*AssetDescriptor
 	WriteFS             WriteableFileSystem
+
+	// This map tracks in-memory assets to their load path
+	// it is needed when assets are saved to convert the Asset
+	// to a path
+	AssetToLoadPath map[Asset]string
+
+	// The opposite mapping
+	LoadPathToAsset map[string]Asset
 }
 
 type fsWrapper struct {
@@ -153,6 +120,8 @@ func newAssetManagerImpl() *assetManagerImpl {
 	return &assetManagerImpl{
 		FileSystems:      []*fsWrapper{},
 		AssetDescriptors: map[string]*AssetDescriptor{},
+		AssetToLoadPath:  map[Asset]string{},
+		LoadPathToAsset:  map[string]Asset{},
 	}
 }
 
@@ -198,10 +167,20 @@ func (a *assetManagerImpl) Save(path string, toSave Asset) error {
 	if assetManager.WriteFS == nil {
 		return fmt.Errorf("Can't Save asset - no writable FS")
 	}
+	// toSave must be a pointer, but the top level needs to be
+	// saved as a struct
+	if reflect.TypeOf(toSave).Kind() != reflect.Pointer {
+		panic("Fatal, not a pointer being saved")
+	}
+
+	// go from the pointer to the real struct
+	structToSave := reflect.ValueOf(toSave).Elem()
+
+	fixedRefs := a.buildJsonToSave(structToSave.Interface())
 	_, fullname := ObjectTypeName(toSave)
 	container := saveableAssetContainer{
 		Type:  fullname,
-		Inner: toSave,
+		Inner: fixedRefs,
 	}
 	data, err := json.MarshalIndent(container, "", "  ")
 	if err != nil {
@@ -210,5 +189,122 @@ func (a *assetManagerImpl) Save(path string, toSave Asset) error {
 	if !strings.HasSuffix(path, ".json") {
 		path = path + ".json"
 	}
+	a.AssetToLoadPath[toSave] = path
 	return assetManager.WriteFS.WriteFile(path, data)
+}
+
+type assetLoadPath struct {
+	Type string
+	Path string
+}
+
+func (a *assetManagerImpl) buildJsonToSave(obj any) any {
+	t := reflect.TypeOf(obj)
+	switch t.Kind() {
+	case reflect.Pointer:
+		_, fullname := ObjectTypeName(obj)
+		path := a.AssetToLoadPath[obj]
+		return assetLoadPath{
+			Type: fullname,
+			Path: path,
+		}
+	case reflect.Struct:
+		{
+			m := map[string]any{}
+			for i := 0; i < t.NumField(); i++ {
+				field := t.Field(i)
+				if !field.IsExported() {
+					continue
+				}
+				m[field.Name] = a.buildJsonToSave(reflect.ValueOf(obj).Field(i).Interface())
+			}
+			return m
+		}
+	default:
+		return obj
+	}
+}
+
+func (a *assetManagerImpl) Load(assetPath string) (Asset, error) {
+	data, err := assetManager.ReadFile(assetPath)
+	if err != nil {
+		return nil, err
+	}
+
+	container := assetContainer{}
+	err = json.Unmarshal(data, &container)
+
+	assetDescriptor, ok := assetManager.AssetDescriptors[container.Type]
+	if !ok {
+		return nil, fmt.Errorf("Unknown asset '%s' - is type registered?", container.Type)
+	}
+	obj, err := assetDescriptor.Create()
+
+	if err != nil {
+		return nil, err
+	}
+
+	_, TType := ObjectTypeName(obj)
+	//println("TType ", TType)
+	if TType != container.Type {
+		return nil, fmt.Errorf("Load type mismatch.  Wanted %s, loaded %s", TType, container.Type)
+	}
+
+	err = json.Unmarshal(container.Inner, obj)
+	//fmt.Printf("%v %#v\n", reflect.TypeOf(obj).Name(), obj)
+	if postLoad, ok := obj.(PostLoadingAsset); ok {
+		postLoad.PostLoad()
+	}
+	return obj, err
+}
+
+func (a *assetManagerImpl) unmarshalFromAny(data any, v any) error {
+	t := reflect.TypeOf(v)
+	fmt.Printf("t %s\n", t.String())
+	// deref the pointer
+	t = t.Elem()
+	fmt.Printf("*t %s\n", t.String())
+
+	val := reflect.ValueOf(v).Elem()
+	fmt.Printf("val %s\n", val.String())
+	if !val.CanSet() {
+		panic("val not settable")
+	}
+	switch t.Kind() {
+	case reflect.Struct:
+		rmap := data.(map[string]interface{})
+		for i := 0; i < t.NumField(); i++ {
+			name := t.Field(i).Name
+			fmt.Printf("name %s\n", name)
+			mapVal := rmap[name]
+			fmt.Printf("mapVal %s\n", mapVal)
+
+			vField := val.Field(i)
+			switch vField.Kind() {
+			case reflect.Pointer:
+				// There will be a serialized assetLoadPath in mapVal
+				lp := mapVal.(map[string]any)
+				path := lp["Path"].(string)
+				asset := a.LoadPathToAsset[path]
+				fmt.Printf("Pointer %#v\n", mapVal)
+				fmt.Printf("asset %#v\n", asset)
+				vField.Set(reflect.ValueOf(asset))
+
+			case reflect.Struct:
+				target := val.Field(i).Addr().Interface()
+				fmt.Printf("target %#v\n", target)
+				a.unmarshalFromAny(mapVal, target)
+
+			case reflect.String:
+				vField.SetString(mapVal.(string))
+			default:
+				fmt.Printf("Default %#v %#v\n", vField, mapVal)
+			}
+		}
+	default:
+		dataVal := reflect.ValueOf(data)
+		fmt.Printf("dataVal %s\n", dataVal)
+		reflect.ValueOf(v).Set(dataVal)
+	}
+	return nil
 }

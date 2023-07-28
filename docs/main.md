@@ -6,6 +6,7 @@ It should be easy to use and intuitive, but also well designed.
 * [Decision Log](decisions.md) - why certain decisions were made
 
 # Next Goal
+- Auto load recursive asset paths
 - Create an asset in the editor
 - Create a custom asset editor
 - Create a tiny game that does not include the editor package, but does load the created asset

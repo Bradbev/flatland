@@ -259,52 +259,60 @@ func (a *assetManagerImpl) Load(assetPath string) (Asset, error) {
 }
 
 func (a *assetManagerImpl) unmarshalFromAny(data any, v any) error {
-	t := reflect.TypeOf(v)
-	fmt.Printf("t %s\n", t.String())
-	// deref the pointer
-	t = t.Elem()
-	fmt.Printf("*t %s\n", t.String())
+	return a.unmarshalFromValues(reflect.ValueOf(data), reflect.ValueOf(v).Elem())
+}
 
-	val := reflect.ValueOf(v).Elem()
-	fmt.Printf("val %s\n", val.String())
-	if !val.CanSet() {
-		panic("val not settable")
-	}
-	switch t.Kind() {
+func (a *assetManagerImpl) unmarshalFromValues(data reflect.Value, v reflect.Value) error {
+	fmt.Printf("v:%#v settable? %v kind %s\n", v, v.CanSet(), v.Kind())
+	fmt.Printf("data:%#v kind %s\n", data, data.Kind())
+	t := v.Type()
+	switch v.Kind() {
+	case reflect.Pointer:
+		fmt.Printf("Handle ptr")
+		// There will be a serialized assetLoadPath in data
+		lp := data.Interface().(map[string]any)
+		path := lp["Path"].(string)
+		asset := a.LoadPathToAsset[path]
+		fmt.Printf("Pointer %#v\n", data)
+		fmt.Printf("asset %#v\n", asset)
+		v.Set(reflect.ValueOf(asset))
+
 	case reflect.Struct:
-		rmap := data.(map[string]interface{})
 		for i := 0; i < t.NumField(); i++ {
-			name := t.Field(i).Name
-			fmt.Printf("name %s\n", name)
-			mapVal := rmap[name]
-			fmt.Printf("mapVal %s\n", mapVal)
+			fieldToSet := v.Field(i)
+			key := reflect.ValueOf(t.Field(i).Name)
+			dataToRead := data.MapIndex(key)
+			fmt.Printf("Key %v Data %v\n", key, dataToRead)
 
-			vField := val.Field(i)
-			switch vField.Kind() {
-			case reflect.Pointer:
-				// There will be a serialized assetLoadPath in mapVal
-				lp := mapVal.(map[string]any)
-				path := lp["Path"].(string)
-				asset := a.LoadPathToAsset[path]
-				fmt.Printf("Pointer %#v\n", mapVal)
-				fmt.Printf("asset %#v\n", asset)
-				vField.Set(reflect.ValueOf(asset))
-
-			case reflect.Struct:
-				target := val.Field(i).Addr().Interface()
-				fmt.Printf("target %#v\n", target)
-				a.unmarshalFromAny(mapVal, target)
-
-			case reflect.String:
-				vField.SetString(mapVal.(string))
-			default:
-				fmt.Printf("Default %#v %#v\n", vField, mapVal)
+			if dataToRead.Kind() == reflect.Invalid {
+				log.Printf("D is missing, skipping")
+				continue
 			}
+			a.unmarshalFromValues(dataToRead.Elem(), fieldToSet)
+		}
+	case reflect.Slice:
+		v.Set(reflect.MakeSlice(v.Type(), data.Len(), data.Len()))
+		fallthrough
+	case reflect.Array:
+		for i := 0; i < data.Len(); i++ {
+			indexToSet := v.Index(i)
+			dataToRead := data.Index(i)
+			fmt.Printf("Array Data %v\n", dataToRead)
+			a.unmarshalFromValues(dataToRead.Elem(), indexToSet)
 		}
 	default:
-		dataVal := reflect.ValueOf(data)
-		fmt.Printf("dataVal %s\n", dataVal)
-		reflect.ValueOf(v).Set(dataVal)
+		if data.CanFloat() {
+			if v.CanFloat() {
+				v.SetFloat(data.Float())
+			} else if v.CanInt() {
+				v.SetInt(int64(data.Float()))
+			} else if v.CanUint() {
+				v.SetUint(uint64(data.Float()))
+			}
+		} else {
+			v.Set(data)
+		}
 	}
+
 	return nil
 }

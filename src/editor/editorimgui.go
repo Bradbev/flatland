@@ -9,6 +9,7 @@ import (
 	"strings"
 
 	"github.com/inkyblackness/imgui-go/v4"
+	"golang.org/x/exp/slices"
 )
 
 // This file contains the imgui specific workings of editor
@@ -31,7 +32,7 @@ func (e *imguiEditorImpl) FieldName(name string) {
 }
 
 func ImguiTypeEditor() *CommonEditor {
-	ed := NewTypeEditor(&imguiEditorImpl{})
+	ed := NewCommonEditor(&imguiEditorImpl{})
 	ed.AddType(new(float32), float32Edit)
 	ed.AddType(new(float64), float64Edit)
 	ed.AddType(new(bool), boolEdit)
@@ -111,16 +112,35 @@ func intEdit(types *CommonEditor, value reflect.Value) error {
 const errorModalID = "ErrorModal##unique"
 
 type ImguiEditor struct {
-	commonEditor   *CommonEditor
-	contentPath    string
-	fsys           fs.FS
-	errorModalText string
+	commonEditor    *CommonEditor
+	contentPath     string
+	fsys            fs.FS
+	errorModalText  string
+	content         *contentWindow
+	assetsUnderEdit []*assetEditWindow
+}
+
+type contentWindow struct {
+	ed                   *ImguiEditor
+	OpenDirs             map[string]bool
+	SelectedDir          string
+	ContentItems         []string
+	SelectedContentItems map[string]bool
+}
+
+type assetEditWindow struct {
+	target asset.Asset
+	path   string
 }
 
 func NewImguiEditor() *ImguiEditor {
 	ret := &ImguiEditor{
 		commonEditor: ImguiTypeEditor(),
+		content: &contentWindow{
+			OpenDirs: map[string]bool{},
+		},
 	}
+	ret.content.ed = ret
 
 	return ret
 }
@@ -132,11 +152,47 @@ type fswalk struct {
 }
 
 func (e *ImguiEditor) Update(deltaseconds float32) error {
-	e.contentWindow()
+	e.content.draw()
+
+	var toRemove *assetEditWindow
+	for _, toEdit := range e.assetsUnderEdit {
+		func(editing *assetEditWindow) {
+			defer imgui.End()
+			open := true
+			if imgui.BeginV(editing.path, &open, 0) {
+				e.commonEditor.Edit(editing.target)
+			}
+			if !open {
+				toRemove = editing
+			}
+		}(toEdit)
+	}
+	e.assetsUnderEdit = slices.DeleteFunc(e.assetsUnderEdit, func(aew *assetEditWindow) bool {
+		return toRemove == aew
+	})
 	return nil
 }
 
-func (e *ImguiEditor) contentWindow() error {
+func (e *ImguiEditor) EditAsset(path string) {
+	// don't add already open windows
+	if slices.ContainsFunc(e.assetsUnderEdit, func(underEdit *assetEditWindow) bool {
+		return underEdit.path == path
+	}) {
+		return
+	}
+
+	loaded, err := asset.Load(path)
+	if err != nil {
+		fmt.Println(err)
+		return
+	}
+	e.assetsUnderEdit = append(e.assetsUnderEdit, &assetEditWindow{
+		path:   path,
+		target: loaded,
+	})
+}
+
+func (c *contentWindow) draw() error {
 	defer imgui.End()
 	if !imgui.Begin("Content Browser") {
 		return nil
@@ -144,10 +200,40 @@ func (e *ImguiEditor) contentWindow() error {
 	if imgui.Button("Add") {
 		imgui.OpenPopup("AddAssetModal")
 	}
-	e.drawAddAssetModal()
+	c.drawAddAssetModal()
 
-	cache := e.buildFileCache()
-	e.walkCache(cache)
+	cache := c.ed.buildFileCache()
+	avail := imgui.ContentRegionAvail()
+	size := imgui.Vec2{X: avail.X * 0.5, Y: avail.Y}
+	imgui.BeginChildV("TreeViewChild", size, false, imgui.WindowFlagsAlwaysAutoResize)
+	c.drawDirectoryTreeFromCache(cache)
+	imgui.EndChild()
+
+	imgui.SameLine()
+	imgui.BeginChildV("ContentChild", size, false, imgui.WindowFlagsAlwaysAutoResize)
+	if imgui.BeginTable("content items", 2) {
+		for index := 0; index < len(c.ContentItems); {
+			imgui.TableNextRow()
+			for col := 0; col < 2; col++ {
+				imgui.TableSetColumnIndex(col)
+				text := c.ContentItems[index]
+				if imgui.SelectableV(
+					text,
+					c.SelectedContentItems[text],
+					imgui.SelectableFlagsAllowDoubleClick, imgui.Vec2{}) {
+
+					// if ctrl down
+					//c.SelectedContentItems[text] = !c.SelectedContentItems[text]
+					if imgui.IsMouseDoubleClicked(0) {
+						c.ed.EditAsset(filepath.Join(c.SelectedDir, text))
+					}
+				}
+				index++
+			}
+		}
+		imgui.EndTable()
+	}
+	imgui.EndChild()
 
 	return nil
 }
@@ -200,28 +286,43 @@ func (e *ImguiEditor) buildFileCache() *fswalk {
 	return stack[0]
 }
 
-func (e *ImguiEditor) walkCache(node *fswalk) {
-	path := filepath.Base(node.path)
-	if path == "." {
-		path = "content"
+func (c *contentWindow) drawDirectoryTreeFromCache(node *fswalk) {
+	basepath := filepath.Base(node.path)
+	if basepath == "." {
+		basepath = "content"
 	}
-	if imgui.TreeNodeV(path, imgui.TreeNodeFlagsDefaultOpen) {
+	flags := imgui.TreeNodeFlagsOpenOnArrow | imgui.TreeNodeFlagsOpenOnDoubleClick
+	if c.OpenDirs[node.path] {
+		flags |= imgui.TreeNodeFlagsDefaultOpen
+	}
+	if len(node.dirs) == 0 {
+		flags |= imgui.TreeNodeFlagsLeaf
+	}
+	if node.path == c.SelectedDir {
+		flags |= imgui.TreeNodeFlagsSelected
+	}
+	c.OpenDirs[node.path] = false
+
+	isOpened := imgui.TreeNodeV(basepath, flags)
+	if imgui.IsItemClicked() {
+		c.SelectedDir = node.path
+		c.ContentItems = node.files
+		c.SelectedContentItems = map[string]bool{}
+	}
+	if isOpened {
+		c.OpenDirs[node.path] = true
 		for _, n := range node.dirs {
-			e.walkCache(n)
-		}
-		for _, f := range node.files {
-			imgui.TreeNodeV(filepath.Base(f),
-				imgui.TreeNodeFlagsLeaf|imgui.TreeNodeFlagsNoTreePushOnOpen)
+			c.drawDirectoryTreeFromCache(n)
 		}
 		imgui.TreePop()
 	}
 }
 
-func (e *ImguiEditor) drawAddAssetModal() {
+func (c *contentWindow) drawAddAssetModal() {
 	open := true
 	if imgui.BeginPopupModalV("AddAssetModal", &open, imgui.WindowFlagsAlwaysAutoResize) {
 		defer imgui.EndPopup()
-		defer e.displayErrorModal()
+		defer c.ed.displayErrorModal()
 
 		/*
 			if imgui.Button("another") {
@@ -242,7 +343,7 @@ func (e *ImguiEditor) drawAddAssetModal() {
 				_ = err
 				err = asset.Save("test", obj)
 				if err != nil {
-					e.raiseError(err)
+					c.ed.raiseError(err)
 				}
 			}
 		}

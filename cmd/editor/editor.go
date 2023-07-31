@@ -3,6 +3,7 @@ package main
 import (
 	"flatland/src/asset"
 	"flatland/src/editor"
+	"flatland/src/flat"
 	"fmt"
 
 	"github.com/gabstv/ebiten-imgui/renderer"
@@ -27,6 +28,7 @@ func main() {
 	}
 
 	asset.RegisterAsset(editTest{})
+	asset.RegisterAsset(flat.Image{})
 
 	ebiten.RunGame(gg)
 }

@@ -43,7 +43,7 @@ func WriteFS(base string) asset.WriteableFileSystem {
 	return &editorWriteFS{base: base}
 }
 
-func NewTypeEditor(impl EditorImpl) *CommonEditor {
+func NewCommonEditor(impl EditorImpl) *CommonEditor {
 	path := "./content"
 	ret := &CommonEditor{
 		typeEditors: map[string]TypeEditorFn{},
@@ -62,11 +62,13 @@ func (t *CommonEditor) AddType(typeToAdd any, edit TypeEditorFn) {
 	t.typeEditors[fullName] = edit
 }
 
+// Edit accepts any object and draws an editor window for it
 func (t *CommonEditor) Edit(obj any) {
 	value := reflect.ValueOf(obj)
 	t.EditValue(value)
 }
 
+// EditValue accepts a reflect.Value and draws an editor window for that value
 func (t *CommonEditor) EditValue(value reflect.Value) {
 	_, fullName := asset.TypeName(value.Type())
 	if value.Kind() != reflect.Pointer {

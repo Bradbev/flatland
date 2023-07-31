@@ -21,7 +21,7 @@ func (t *testEditorImpl) EndStruct()         {}
 func (t *testEditorImpl) FieldName(string)   {}
 
 func TestGenericEdit(t *testing.T) {
-	e := editor.NewTypeEditor(&testEditorImpl{})
+	e := editor.NewCommonEditor(&testEditorImpl{})
 	f := float64(45)
 
 	e.AddType(new(float64), func(types *editor.CommonEditor, v reflect.Value) error {

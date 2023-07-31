@@ -4,6 +4,16 @@ package asset
 * Assets on disk have the same format - assetContainer.  This struct holds
 * some meta data about the asset and then an Inner that holds the user
 * defined data.
+*
+* The Rules of Assets
+* Every Asset is a singleton.  When an Asset is in memory there is only one copy of
+* it.  This means that it is easy to tune live assets, but also means that you cannot
+* use Assets as a way to store runtime data.  Runtime data should be stored and updated
+* in Actors.
+*
+* Pointers to other Assets within an Assets are treated specially.  The Asset loading system
+* will load the dependency.  This means that loading a single Asset may results in a load
+* chain that loads nearly everything.
  */
 
 import (

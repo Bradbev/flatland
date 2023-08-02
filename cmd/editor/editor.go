@@ -24,11 +24,11 @@ func main() {
 	gg := &G{
 		mgr:    mgr,
 		dscale: ebiten.DeviceScaleFactor(),
-		ed:     editor.NewImguiEditor(),
+		ed:     editor.New(),
 	}
 
 	asset.RegisterAsset(editTest{})
-	asset.RegisterAsset(flat.Image{})
+	flat.RegisterAllFlatTypes()
 
 	ebiten.RunGame(gg)
 }

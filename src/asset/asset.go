@@ -20,11 +20,15 @@ import (
 	"encoding/json"
 	"fmt"
 	"io/fs"
+	systemLog "log"
+	"os"
 	"reflect"
 	"strings"
 
 	"golang.org/x/exp/slices"
 )
+
+var log = systemLog.New(os.Stderr, "Asset", systemLog.Ltime)
 
 type AssetDescriptor struct {
 	Name     string

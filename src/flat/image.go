@@ -16,8 +16,6 @@ type Image struct {
 	img  *ebiten.Image
 }
 
-var _ = asset.RegisterAsset(Image{})
-
 type ImageContainer interface {
 	GetImage() *ebiten.Image
 }

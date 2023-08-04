@@ -44,6 +44,9 @@ func imageEd(ed *editor.ImguiEditor, value reflect.Value) error {
 	winSize := imgui.WindowSize()
 	edgui.Text("Window size (%d, %d) %v", int(winSize.X), int(winSize.Y), imgui.CursorPos())
 
+	if image.GetImage() == nil {
+		return nil
+	}
 	size := image.GetImage().Bounds().Size()
 	edgui.Text("Image size (%d, %d)", int(size.X), int(size.Y))
 

@@ -1,5 +1,3 @@
-package asset
-
 /*
 * Assets on disk have the same format - assetContainer.  This struct holds
 * some meta data about the asset and then an Inner that holds the user
@@ -12,9 +10,11 @@ package asset
 * in Actors.
 *
 * Pointers to other Assets within an Assets are treated specially.  The Asset loading system
-* will load the dependency.  This means that loading a single Asset may results in a load
+* will load the dependency.  This means that loading a single Asset may result in a load
 * chain that loads nearly everything.
  */
+
+package asset
 
 import (
 	"encoding/json"

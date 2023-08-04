@@ -50,8 +50,10 @@ type editTest struct {
 	NestedImmediate struct {
 		NestedFloat  float32
 		NestedFloat2 float32
-	}
-	NestedIndirect nestedIndirect
+	} `flat:"Override field name from Nested Immediate"`
+	NestedIndirect             nestedIndirect
+	LastOne                    bool
+	SupportNestedCustomEditors flat.Image
 }
 
 var test editTest
@@ -81,6 +83,15 @@ func (g *G) Update() error {
 	{
 		g.ed.Update(1.0 / float32(ebiten.ActualTPS()))
 		g.debugWindow()
+		func() {
+			defer func() {
+				if err := recover(); err != nil {
+					fmt.Println(err)
+				}
+			}()
+
+			g.ed.Edit(&test)
+		}()
 	}
 	g.mgr.EndFrame()
 	return nil

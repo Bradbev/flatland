@@ -25,7 +25,7 @@ type ImguiEditor struct {
 	Manager *renderer.Manager
 	// context should be used by custom editors to store their own data across
 	// calls to the edit function
-	context    map[unsafe.Pointer]any
+	context    map[unsafe.Pointer]map[any]any
 	typeEditor *typeEditor
 
 	fsysRead  fs.FS
@@ -55,7 +55,7 @@ var closeDrawable = errors.New("Close")
 func New(path string, manager *renderer.Manager) *ImguiEditor {
 	ret := &ImguiEditor{
 		Manager:    manager,
-		context:    map[unsafe.Pointer]any{},
+		context:    map[unsafe.Pointer]map[any]any{},
 		typeEditor: newTypeEditor(),
 
 		fsysRead:  os.DirFS(path),
@@ -65,16 +65,13 @@ func New(path string, manager *renderer.Manager) *ImguiEditor {
 		nextTextureID:    100,
 		embeddedTextures: map[any]embeddedTexture{},
 	}
-	content := &contentWindow{
-		OpenDirs: map[string]bool{},
-		editor:   ret,
-	}
 	ret.typeEditor.ed = ret
-
-	ret.AddDrawable(content)
 
 	asset.RegisterFileSystem(ret.fsysRead, 0)
 	asset.RegisterWritableFileSystem(ret.fsysWrite)
+
+	contentWindow := newContentWindow(ret)
+	ret.AddDrawable(contentWindow)
 
 	return ret
 }
@@ -83,11 +80,23 @@ func New(path string, manager *renderer.Manager) *ImguiEditor {
 // use this function to save off context during edits
 // returns true if this is the first time the context has been created
 func GetContext[T any](ed *ImguiEditor, key reflect.Value) (*T, bool) {
-	if value, existing := ed.context[key.Addr().UnsafePointer()]; existing {
-		return value.(*T), true
+	ptr := key.Addr().UnsafePointer()
+	contexts, contextsExists := ed.context[ptr]
+	if !contextsExists {
+		// first level map doesn't exist yet
+		contexts = map[any]any{}
+		ed.context[ptr] = contexts
 	}
+	var zeroT T
+
+	// found the type/value context
+	if context, exists := contexts[zeroT]; exists {
+		return context.(*T), true
+	}
+
+	// second level map doesn't exist
 	ret := new(T)
-	ed.context[key.Addr().UnsafePointer()] = ret
+	contexts[zeroT] = ret
 	return ret, false
 }
 

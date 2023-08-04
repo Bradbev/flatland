@@ -3,6 +3,7 @@ package editor
 // this file is the general editor implementation
 import (
 	"flatland/src/asset"
+	"flatland/src/editor/edgui"
 	"fmt"
 	"log"
 	"os"
@@ -88,27 +89,53 @@ func (e *typeEditor) addPrimitiveTypes() {
 
 // primitive type handler funcs below here
 
+type structEdContext struct {
+	FieldNameOverride string
+}
+
 func structEd(types *ImguiEditor, value reflect.Value) error {
 	t := value.Type()
 	if t.Kind() != reflect.Struct {
 		logger.Fatalf("Not a struct - %v", t.Kind())
 	}
 	name, _ := asset.TypeName(t)
-	imgui.BeginTable(name, 2)
-	for i := 0; i < t.NumField(); i++ {
-		field := value.Field(i)
-		structField := t.Field(i)
-		if structField.IsExported() {
-			imgui.TableNextRow()
-
-			imgui.TableNextColumn()
-			imgui.Text(structField.Name)
-
-			imgui.TableNextColumn()
-			types.EditValue(field.Addr())
-		}
+	// If this is a nested type, the higher stack level might have
+	// wanted to override the name
+	if ctx, ok := GetContext[structEdContext](types, value); ok {
+		name = ctx.FieldNameOverride
 	}
-	imgui.EndTable()
+	edgui.TreeNodeWithPop(name, imgui.TreeNodeFlagsDefaultOpen, func() {
+		imgui.BeginTable(name+"##table", 2)
+		for i := 0; i < t.NumField(); i++ {
+			field := value.Field(i)
+			structField := t.Field(i)
+			if structField.IsExported() {
+				if structField.Type.Kind() == reflect.Struct {
+					// disable the current table, edit the value
+					// in a new tree node and then restart the table
+					imgui.EndTable()
+					// set the name for the new tree
+					ctx, _ := GetContext[structEdContext](types, field)
+					ctx.FieldNameOverride = structField.Name
+					if name, ok := structField.Tag.Lookup("flat"); ok {
+						ctx.FieldNameOverride = name
+					}
+					types.EditValue(field.Addr())
+					imgui.BeginTable(name+"##table", 2)
+					continue
+				}
+
+				imgui.TableNextRow()
+
+				imgui.TableNextColumn()
+				imgui.Text(structField.Name)
+
+				imgui.TableNextColumn()
+				types.EditValue(field.Addr())
+			}
+		}
+		imgui.EndTable()
+	})
 
 	return nil
 }

@@ -1,0 +1,7 @@
+package flat
+
+import "flatland/src/asset"
+
+func RegisterAllFlatTypes() {
+	asset.RegisterAsset(Image{})
+}

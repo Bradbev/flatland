@@ -16,10 +16,6 @@ type Image struct {
 	img  *ebiten.Image
 }
 
-type ImageContainer interface {
-	GetImage() *ebiten.Image
-}
-
 func (i *Image) PostLoad() {
 	fmt.Printf("Post load %#v\n", i)
 	content, err := asset.ReadFile(i.Path)

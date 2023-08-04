@@ -4,6 +4,7 @@ import (
 	"flatland/src/asset"
 	"flatland/src/editor"
 	"flatland/src/flat"
+	"flatland/src/flat/editors"
 	"fmt"
 
 	"github.com/gabstv/ebiten-imgui/renderer"
@@ -24,11 +25,12 @@ func main() {
 	gg := &G{
 		mgr:    mgr,
 		dscale: ebiten.DeviceScaleFactor(),
-		ed:     editor.New(),
+		ed:     editor.New("./content", mgr),
 	}
 
 	asset.RegisterAsset(editTest{})
 	flat.RegisterAllFlatTypes()
+	editors.RegisterAllFlatEditors(gg.ed)
 
 	ebiten.RunGame(gg)
 }

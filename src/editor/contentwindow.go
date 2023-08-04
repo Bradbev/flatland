@@ -21,7 +21,8 @@ type contentWindow struct {
 	SelectedContentItems map[string]bool
 
 	// used when creating an asset
-	newAssetName string
+	newAssetName  string
+	assetToCreate *asset.AssetDescriptor
 }
 
 func newContentWindow(editor *ImguiEditor) *contentWindow {
@@ -65,7 +66,7 @@ func (c *contentWindow) Draw() error {
 				imgui.TableNextRow()
 				for col := 0; col < 2 && index < len(c.ContentItems); col++ {
 					imgui.TableSetColumnIndex(col)
-					text := c.ContentItems[index]
+					text, _ := strings.CutPrefix(c.ContentItems[index], c.SelectedDir+"/")
 					if imgui.SelectableV(
 						text,
 						c.SelectedContentItems[text],
@@ -134,24 +135,41 @@ func (c *contentWindow) drawAddAssetModal() {
 		invalidName := strings.Contains(c.newAssetName, ".")
 		if invalidName {
 			edgui.Text("Names may not contain '.'")
-		}
-
-		//imgui.PushStyleColor(imgui.StyleColorText, imgui.Vec4{0.5, 0.5, 0.5, 0.5})
-		imgui.Separator()
-		edgui.Text("Assets")
-		for _, a := range asset.ListAssets() {
-			imgui.TreeNodeV(a.Name, imgui.TreeNodeFlagsLeaf|imgui.TreeNodeFlagsNoTreePushOnOpen)
-			if imgui.IsItemClicked() {
-				c.createNewAsset(a)
+		} else if c.assetToCreate == nil {
+			edgui.Text("Select Asset Type")
+		} else {
+			edgui.Text("Asset Type: %s", c.assetToCreate.Name)
+			edgui.Text("Path: content/%s.json", filepath.Join(c.SelectedDir, c.newAssetName))
+			if imgui.Button("Create") {
+				c.createNewAsset(c.assetToCreate)
+				imgui.CloseCurrentPopup()
 			}
 		}
+
+		imgui.Separator()
+		func() { // asset box
+			if invalidName {
+				imgui.PushStyleColor(imgui.StyleColorText, imgui.Vec4{0.5, 0.5, 0.5, 0.5})
+				defer imgui.PopStyleColor()
+			}
+			imgui.BeginChildV("Assets", imgui.Vec2{}, true, 0)
+			defer imgui.EndChild()
+			//edgui.Text("Assets")
+			for _, a := range asset.ListAssets() {
+				imgui.TreeNodeV(a.Name, imgui.TreeNodeFlagsLeaf|imgui.TreeNodeFlagsNoTreePushOnOpen)
+				if imgui.IsItemClicked() {
+					c.assetToCreate = a
+				}
+			}
+		}()
 	}
 }
 
 func (c *contentWindow) createNewAsset(a *asset.AssetDescriptor) {
 	obj, err := a.Create()
 	_ = err
-	err = asset.Save(c.newAssetName, obj)
+	dest := filepath.Join(c.SelectedDir, c.newAssetName) + ".json"
+	err = asset.Save(dest, obj)
 	if err != nil {
 		fmt.Printf("error %v\n", err)
 		//c.editor.raiseError(err)

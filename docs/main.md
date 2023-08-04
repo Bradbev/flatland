@@ -6,8 +6,8 @@ It should be easy to use and intuitive, but also well designed.
 * [Decision Log](decisions.md) - why certain decisions were made
 
 # Next Goal
-- Save/restore editor state
 - Create an asset in the editor
+- Save/restore editor state
 - Path selection dialog
 - Auto load recursive asset paths? (test it)
 - Create a tiny game that does not include the editor package, but does load the created asset

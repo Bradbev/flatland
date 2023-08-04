@@ -20,7 +20,8 @@ func (i *Image) PostLoad() {
 	fmt.Printf("Post load %#v\n", i)
 	content, err := asset.ReadFile(i.Path)
 	if err != nil {
-		log.Fatal(err)
+		log.Print(err)
+		return
 	}
 
 	img, _, err := image.Decode(bytes.NewReader(content))

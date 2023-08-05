@@ -143,7 +143,7 @@ type assetManagerImpl struct {
 	// to a path
 	AssetToLoadPath map[Asset]Path
 
-	// The opposite mapping
+	// Maps a Path to an already loaded asset
 	LoadPathToAsset map[Path]Asset
 }
 
@@ -245,8 +245,15 @@ func (a *assetManagerImpl) Save(path Path, toSave Asset) error {
 	if !strings.HasSuffix(string(path), ".json") {
 		path = path + ".json"
 	}
+	err = assetManager.WriteFS.WriteFile(path, data)
+
+	if err != nil {
+		return err
+	}
 	a.AssetToLoadPath[toSave] = path
-	return assetManager.WriteFS.WriteFile(path, data)
+	a.LoadPathToAsset[path] = toSave
+
+	return nil
 }
 
 type assetLoadPath struct {
@@ -282,6 +289,10 @@ func (a *assetManagerImpl) buildJsonToSave(obj any) any {
 }
 
 func (a *assetManagerImpl) Load(assetPath Path) (Asset, error) {
+	if asset, loaded := a.LoadPathToAsset[assetPath]; loaded {
+		return asset, nil
+	}
+
 	data, err := assetManager.ReadFile(assetPath)
 	if err != nil {
 		return nil, err
@@ -306,10 +317,24 @@ func (a *assetManagerImpl) Load(assetPath Path) (Asset, error) {
 		return nil, fmt.Errorf("Load type mismatch.  Wanted %s, loaded %s", TType, container.Type)
 	}
 
-	err = json.Unmarshal(container.Inner, obj)
+	var anyInner any
+	err = json.Unmarshal(container.Inner, &anyInner)
+	if err != nil {
+		return nil, err
+	}
+
+	err = a.unmarshalFromAny(anyInner, obj)
+	if err != nil {
+		return nil, err
+	}
 	//fmt.Printf("%v %#v\n", reflect.TypeOf(obj).Name(), obj)
 	if postLoad, ok := obj.(PostLoadingAsset); ok {
 		postLoad.PostLoad()
+	}
+	if err == nil {
+		// save the references to these assets to prevent future loading
+		a.AssetToLoadPath[obj] = assetPath
+		a.LoadPathToAsset[assetPath] = obj
 	}
 	return obj, err
 }
@@ -328,9 +353,12 @@ func (a *assetManagerImpl) unmarshalFromValues(data reflect.Value, v reflect.Val
 		// There will be a serialized assetLoadPath in data
 		lp := data.Interface().(map[string]any)
 		path := lp["Path"].(string)
-		asset := a.LoadPathToAsset[Path(path)]
+		asset, err := a.Load(Path(path))
 		fmt.Printf("Pointer %#v\n", data)
 		fmt.Printf("asset %#v\n", asset)
+		if err != nil {
+			return fmt.Errorf("unable to load asset at path %s", path)
+		}
 		v.Set(reflect.ValueOf(asset))
 
 	case reflect.Struct:

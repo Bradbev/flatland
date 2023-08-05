@@ -7,8 +7,6 @@ import (
 	"fmt"
 	"io/fs"
 	"log"
-	"os"
-	"path/filepath"
 	"reflect"
 	"strings"
 
@@ -24,18 +22,6 @@ type typeEditor struct {
 	// that will be called when that type needs to be edited
 	typeEditFuncs map[string]TypeEditorFn
 	ed            *ImguiEditor
-}
-
-type editorWriteFS struct {
-	base string
-}
-
-func (e *editorWriteFS) WriteFile(path asset.Path, data []byte) error {
-	return os.WriteFile(filepath.Join(e.base, string(path)), data, 0777)
-}
-
-func WriteFS(base string) asset.WriteableFileSystem {
-	return &editorWriteFS{base: base}
 }
 
 func newTypeEditor() *typeEditor {

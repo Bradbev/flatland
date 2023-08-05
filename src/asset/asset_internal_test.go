@@ -126,7 +126,4 @@ func TestUnmashallFromAny(t *testing.T) {
 		Ref:    &testLeaf{Leaf: "RefLeaf"}, // NOTE, Equal tests the values, not the pointer addresses
 	}
 	assert.Equal(t, expected, node)
-
-	//t.Fail()
-
 }

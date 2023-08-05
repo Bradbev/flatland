@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"io/fs"
 	"os"
+	"path/filepath"
 	"reflect"
 	"strings"
 	"unsafe"
@@ -260,4 +261,16 @@ func (e *ImguiEditor) buildFileCache() *fswalk {
 		return nil
 	})
 	return stack[0]
+}
+
+type editorWriteFS struct {
+	base string
+}
+
+func (e *editorWriteFS) WriteFile(path asset.Path, data []byte) error {
+	return os.WriteFile(filepath.Join(e.base, string(path)), data, 0777)
+}
+
+func WriteFS(base string) asset.WriteableFileSystem {
+	return &editorWriteFS{base: base}
 }

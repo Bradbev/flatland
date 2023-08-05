@@ -3,7 +3,6 @@ package asset_test
 import (
 	"encoding/json"
 	"flatland/src/asset"
-	"fmt"
 	"io/fs"
 	"testing"
 
@@ -24,11 +23,11 @@ func TestAssetLoad(t *testing.T) {
 	data := `{
 	"Type": "flatland/src/asset_test.testAsset",
 	"Inner": {
-		"anykey": "hi"
+		"Anykey": "hi"
 	}
 }`
 	testAssetLoad := func(callback func()) {
-		defer asset.Reset()
+		asset.Reset()
 		name := asset.Path("asset.json")
 		callback()
 		newTestAsset(name, data)
@@ -73,7 +72,7 @@ func (f *writeFS) WriteFile(path asset.Path, data []byte) error {
 type js = map[string]any
 
 func TestAssetSave(t *testing.T) {
-	defer asset.Reset()
+	asset.Reset()
 	wfs := newWriteFS()
 	asset.RegisterWritableFileSystem(wfs)
 	asset.RegisterAsset(testAsset{})
@@ -98,16 +97,22 @@ func TestAssetSave(t *testing.T) {
 	}
 	assert.Equal(t, expected, jsonBack)
 
-	asset.RegisterFileSystem(wfs.fs, 0)
-	loaded, err := asset.Load(name)
-	assert.NoError(t, err)
+	testLoad := func(postLoadState bool, msg string) {
+		asset.RegisterFileSystem(wfs.fs, 0)
+		loaded, err := asset.Load(name)
+		assert.NoError(t, err)
 
-	expectedObj := &testAsset{Anykey: "saved", postLoadCalled: true}
-	assert.Equal(t, expectedObj, loaded)
+		expectedObj := &testAsset{Anykey: "saved", postLoadCalled: postLoadState}
+		assert.Equal(t, expectedObj, loaded)
+	}
+	testLoad(false, "Expected post load to be false because we have only saved the asset and kept hold of the orignal object")
+	asset.Reset()
+	asset.RegisterAsset(testAsset{})
+	testLoad(true, "Expected post load to be true because we reset the asset package")
 }
 
 func TestAssetList(t *testing.T) {
-	defer asset.Reset()
+	asset.Reset()
 	asset.RegisterAsset(testAsset{})
 
 	expected := "flatland/src/asset_test.testAsset"
@@ -115,7 +120,7 @@ func TestAssetList(t *testing.T) {
 	assert.Equal(t, expected, assets[0].FullName, "Names don't match")
 }
 func TestAssetCreate(t *testing.T) {
-	defer asset.Reset()
+	asset.Reset()
 	asset.RegisterAsset(testAsset{})
 
 	allAssets := asset.GetAssetDescriptors()
@@ -151,7 +156,7 @@ Linked Assets
 // is saved such that node.Reference is an object that contains a path
 // to load, ie - not serialized as if it were inline.
 func TestAssetSaveLinked(t *testing.T) {
-	defer asset.Reset()
+	asset.Reset()
 	rootFS := newWriteFS()
 	asset.RegisterFileSystem(rootFS.fs, 0)
 	asset.RegisterWritableFileSystem(rootFS)
@@ -208,7 +213,7 @@ func TestAssetSaveLinked(t *testing.T) {
 // Finally the general map needs to be loaded into the
 // target structure.
 func TestAssetLoadLinked(t *testing.T) {
-	defer asset.Reset()
+	asset.Reset()
 	rootFS := newWriteFS()
 	asset.RegisterFileSystem(rootFS.fs, 0)
 	asset.RegisterWritableFileSystem(rootFS)
@@ -246,7 +251,6 @@ func TestAssetLoadLinked(t *testing.T) {
 
 	node := nodeAsset.(*testAssetNode)
 
-	fmt.Printf("%#v\n", node)
-
-	t.Fail()
+	expected := testAssetLeaf{SecondName: "Leaf"}
+	assert.Equal(t, expected, *node.Reference, "Reference needs to be loaded from disk, not default")
 }

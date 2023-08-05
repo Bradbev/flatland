@@ -254,3 +254,46 @@ func TestAssetLoadLinked(t *testing.T) {
 	expected := testAssetLeaf{SecondName: "Leaf"}
 	assert.Equal(t, expected, *node.Reference, "Reference needs to be loaded from disk, not default")
 }
+
+type Float float32
+type MyBool bool
+type Ints []int
+type Bytes []byte
+type testAssetPath struct {
+	Path asset.Path
+	Flt  Float
+	Bool MyBool
+	B    Bytes
+	I    Ints
+}
+
+func TestAliasedTypes(t *testing.T) {
+	rootFS := newWriteFS()
+	reset := func() {
+		asset.Reset()
+		asset.RegisterFileSystem(rootFS.fs, 0)
+		asset.RegisterWritableFileSystem(rootFS)
+		asset.RegisterAsset(testAssetPath{})
+	}
+
+	reset()
+	toSave := &testAssetPath{
+		Path: "pathType",
+		Flt:  5,
+		Bool: true,
+		I:    Ints{4, 5, 6},
+		B:    Bytes("Bytes I Saved"),
+	}
+	err := asset.Save("pathtest.json", toSave)
+	assert.NoError(t, err)
+
+	//b, _ := fs.ReadFile(rootFS.fs, "pathtest.json")
+	//fmt.Printf("%v", string(b))
+	//t.Fail()
+
+	reset()
+	loaded, err := asset.Load("pathtest.json")
+	assert.NoError(t, err)
+
+	assert.Equal(t, toSave, loaded)
+}

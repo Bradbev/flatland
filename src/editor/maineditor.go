@@ -89,7 +89,8 @@ type Disposable interface {
 // Get a Context item from the ImguiEditor.  Custom editors should
 // use this function to save off context during edits
 // returns true if this is the first time the context has been created
-func GetContext[T any](ed *ImguiEditor, key reflect.Value) (*T, bool) {
+func GetContext[T any](context *TypeEditContext, key reflect.Value) (*T, bool) {
+	ed := context.Ed
 	ptr := key.Addr().UnsafePointer()
 	contexts, contextsExists := ed.context[ptr]
 	if !contextsExists {
@@ -110,7 +111,8 @@ func GetContext[T any](ed *ImguiEditor, key reflect.Value) (*T, bool) {
 	return ret, true
 }
 
-func DisposeContext(ed *ImguiEditor, key reflect.Value) {
+func DisposeContext(context *TypeEditContext, key reflect.Value) {
+	ed := context.Ed
 	ptr := key.UnsafePointer()
 	if contexts, exists := ed.context[ptr]; exists {
 		for _, value := range contexts {
@@ -125,14 +127,6 @@ func DisposeContext(ed *ImguiEditor, key reflect.Value) {
 
 func (e *ImguiEditor) AddType(typeToAdd any, edit TypeEditorFn) {
 	e.typeEditor.AddType(typeToAdd, edit)
-}
-
-func (e *ImguiEditor) Edit(obj any) {
-	e.typeEditor.Edit(obj)
-}
-
-func (e *ImguiEditor) EditValue(value reflect.Value) {
-	e.typeEditor.EditValue(value)
 }
 
 func (e *ImguiEditor) Update(deltaseconds float32) error {
@@ -185,7 +179,9 @@ func (e *ImguiEditor) EditAsset(path string) {
 	aew := &assetEditWindow{
 		path:   path,
 		target: loaded,
-		editor: e,
+		context: &TypeEditContext{
+			Ed: e,
+		},
 	}
 
 	e.AddDrawable(aew)
@@ -220,8 +216,11 @@ func (e *ImguiEditor) GetImguiTexture(key any, width int, height int) (id imgui.
 }
 
 func (e *ImguiEditor) DisposeImguiTexture(key any) {
-	if tex, exists := e.embeddedTextures[key]; exists {
-		tex.img.Dispose()
+	if _, exists := e.embeddedTextures[key]; exists {
+		// I can't actually dispose here because the texture is still going to be
+		// used on the next Draw call.  It should be fine though because images
+		// are automatically disposed when they are GC'd
+		//tex.img.Dispose()
 		delete(e.embeddedTextures, key)
 	}
 }

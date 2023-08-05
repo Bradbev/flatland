@@ -15,7 +15,18 @@ import (
 
 var logger = log.Default()
 
-type TypeEditorFn func(*ImguiEditor, reflect.Value) error
+type TypeEditorFn func(*TypeEditContext, reflect.Value) error
+
+type TypeEditContext struct {
+	Ed *ImguiEditor
+}
+
+func (c *TypeEditContext) EditValue(value reflect.Value) {
+	c.Ed.typeEditor.EditValue(c, value)
+}
+func (c *TypeEditContext) Edit(obj any) {
+	c.Ed.typeEditor.Edit(c, obj)
+}
 
 type typeEditor struct {
 	// typeEditFuncs map an asset type string to the function
@@ -39,13 +50,13 @@ func (e *typeEditor) AddType(typeToAdd any, edit TypeEditorFn) {
 }
 
 // Edit accepts any object and draws an editor window for it
-func (e *typeEditor) Edit(obj any) {
+func (e *typeEditor) Edit(context *TypeEditContext, obj any) {
 	value := reflect.ValueOf(obj)
-	e.EditValue(value)
+	e.EditValue(context, value)
 }
 
 // EditValue accepts a reflect.Value and draws an editor window for that value
-func (e *typeEditor) EditValue(value reflect.Value) {
+func (e *typeEditor) EditValue(context *TypeEditContext, value reflect.Value) {
 	_, fullName := asset.TypeName(value.Type())
 	if value.Kind() != reflect.Pointer {
 		logger.Panicf("Value %v is not a pointer, this is a programming error", value)
@@ -64,7 +75,7 @@ func (e *typeEditor) EditValue(value reflect.Value) {
 	if !value.CanSet() {
 		logger.Panicf("Value %v is not settable, this is a programming error", value)
 	}
-	edFn(e.ed, value)
+	edFn(context, value)
 }
 
 func (e *typeEditor) addPrimitiveTypes() {
@@ -82,7 +93,7 @@ type fieldEditContext struct {
 	fieldNameOverride string
 }
 
-func structEd(types *ImguiEditor, value reflect.Value) error {
+func structEd(context *TypeEditContext, value reflect.Value) error {
 	t := value.Type()
 	if t.Kind() != reflect.Struct {
 		logger.Fatalf("Not a struct - %v", t.Kind())
@@ -99,7 +110,7 @@ func structEd(types *ImguiEditor, value reflect.Value) error {
 	}
 	// If this is a nested type, the higher stack level might have
 	// wanted to override the name
-	ctx, _ := GetContext[fieldEditContext](types, value)
+	ctx, _ := GetContext[fieldEditContext](context, value)
 	if ctx.fieldNameOverride != "" {
 		name = ctx.fieldNameOverride
 	}
@@ -109,7 +120,7 @@ func structEd(types *ImguiEditor, value reflect.Value) error {
 			field := value.Field(i)
 			structField := t.Field(i)
 			if structField.IsExported() {
-				sfContext, _ := GetContext[*reflect.StructField](types, field)
+				sfContext, _ := GetContext[*reflect.StructField](context, field)
 				*sfContext = &structField
 
 				if structField.Type.Kind() == reflect.Struct {
@@ -118,12 +129,12 @@ func structEd(types *ImguiEditor, value reflect.Value) error {
 					// in a new tree node and then restart the table
 					imgui.EndTable()
 					// set the name for the new tree
-					ctx, _ := GetContext[fieldEditContext](types, field)
+					ctx, _ := GetContext[fieldEditContext](context, field)
 					ctx.fieldNameOverride = structField.Name
 					if name, ok := structField.Tag.Lookup("flat"); ok {
 						ctx.fieldNameOverride = name
 					}
-					types.EditValue(field.Addr())
+					context.EditValue(field.Addr())
 					imgui.BeginTable(name+"##table", 2)
 					continue
 				}
@@ -134,7 +145,7 @@ func structEd(types *ImguiEditor, value reflect.Value) error {
 				imgui.Text(structField.Name)
 
 				imgui.TableNextColumn()
-				types.EditValue(field.Addr())
+				context.EditValue(field.Addr())
 			}
 		}
 		imgui.EndTable()
@@ -150,7 +161,7 @@ func withID(value reflect.Value, body func()) {
 	body()
 }
 
-func float32Edit(types *ImguiEditor, value reflect.Value) error {
+func float32Edit(context *TypeEditContext, value reflect.Value) error {
 	withID(value, func() {
 		addr := value.Addr().Interface().(*float32)
 		imgui.DragFloat("", addr)
@@ -158,7 +169,7 @@ func float32Edit(types *ImguiEditor, value reflect.Value) error {
 	return nil
 }
 
-func float64Edit(types *ImguiEditor, value reflect.Value) error {
+func float64Edit(context *TypeEditContext, value reflect.Value) error {
 	withID(value, func() {
 		f32 := float32(value.Float())
 		imgui.DragFloat("", &f32)
@@ -167,7 +178,7 @@ func float64Edit(types *ImguiEditor, value reflect.Value) error {
 	return nil
 }
 
-func boolEdit(types *ImguiEditor, value reflect.Value) error {
+func boolEdit(context *TypeEditContext, value reflect.Value) error {
 	withID(value, func() {
 		addr := value.Addr().Interface().(*bool)
 		imgui.Checkbox("", addr)
@@ -175,7 +186,7 @@ func boolEdit(types *ImguiEditor, value reflect.Value) error {
 	return nil
 }
 
-func stringEdit(types *ImguiEditor, value reflect.Value) error {
+func stringEdit(context *TypeEditContext, value reflect.Value) error {
 	withID(value, func() {
 		addr := value.Addr().Interface().(*string)
 		imgui.InputText("", addr)
@@ -183,7 +194,7 @@ func stringEdit(types *ImguiEditor, value reflect.Value) error {
 	return nil
 }
 
-func intEdit(types *ImguiEditor, value reflect.Value) error {
+func intEdit(context *TypeEditContext, value reflect.Value) error {
 	withID(value, func() {
 		i32 := int32(value.Int())
 		imgui.InputInt("", &i32)
@@ -196,9 +207,9 @@ type pathEdContext struct {
 	auto *edgui.AutoComplete
 }
 
-func pathEd(ed *ImguiEditor, value reflect.Value) error {
+func pathEd(context *TypeEditContext, value reflect.Value) error {
 	onActivated := func() []string {
-		structFieldPtr, _ := GetContext[*reflect.StructField](ed, value)
+		structFieldPtr, _ := GetContext[*reflect.StructField](context, value)
 		structField := *structFieldPtr
 		val, _ := structField.Tag.Lookup("filter")
 		filters := strings.Split(strings.ToLower(val), ",")
@@ -226,7 +237,7 @@ func pathEd(ed *ImguiEditor, value reflect.Value) error {
 		return items
 	}
 
-	c, firstTime := GetContext[pathEdContext](ed, value)
+	c, firstTime := GetContext[pathEdContext](context, value)
 	if firstTime {
 		c.auto = &edgui.AutoComplete{}
 	}

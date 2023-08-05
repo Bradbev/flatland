@@ -8,9 +8,9 @@ import (
 )
 
 type assetEditWindow struct {
-	target asset.Asset
-	path   string
-	editor *ImguiEditor
+	target  asset.Asset
+	path    string
+	context *TypeEditContext
 }
 
 func (a *assetEditWindow) Draw() error {
@@ -21,11 +21,13 @@ func (a *assetEditWindow) Draw() error {
 		if imgui.Button("Save") {
 			asset.Save(asset.Path(a.path), a.target)
 		}
-		a.editor.typeEditor.Edit(a.target)
+		//a.context.Ed.typeEditor.Edit(a.context, a.target)
+		value := reflect.ValueOf(a.target)
+		a.context.EditValue(value)
 	}
 	if !open {
 		// If there is context from the editor, delete it
-		DisposeContext(a.editor, reflect.ValueOf(a.target))
+		DisposeContext(a.context, reflect.ValueOf(a.target))
 		return closeDrawable
 	}
 	return nil

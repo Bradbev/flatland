@@ -17,6 +17,7 @@
 package asset
 
 import (
+	"encoding/base64"
 	"encoding/json"
 	"fmt"
 	"io/fs"
@@ -378,14 +379,27 @@ func (a *assetManagerImpl) unmarshalFromValues(data reflect.Value, v reflect.Val
 		v.Set(reflect.MakeSlice(v.Type(), data.Len(), data.Len()))
 		fallthrough
 	case reflect.Array:
-		for i := 0; i < data.Len(); i++ {
-			indexToSet := v.Index(i)
-			dataToRead := data.Index(i)
-			//fmt.Printf("Array Data %v\n", dataToRead)
-			a.unmarshalFromValues(dataToRead.Elem(), indexToSet)
+		if data.Len() > 0 && v.Index(0).Kind() == reflect.Uint8 {
+			// byte slices are uuencoded into a string
+			encoded := data.String()
+			decoded, err := base64.StdEncoding.DecodeString(encoded)
+			if err != nil {
+				return err
+			}
+			//fmt.Printf("%v %v\n", decoded, string(decoded))
+			v.SetBytes(decoded)
+		} else {
+			for i := 0; i < data.Len(); i++ {
+				indexToSet := v.Index(i)
+				dataToRead := data.Index(i)
+				//fmt.Printf("Array Data %v\n", dataToRead)
+				a.unmarshalFromValues(dataToRead.Elem(), indexToSet)
+			}
 		}
 	default:
 		if data.CanFloat() {
+			// Json treats all numerics as floats, so we must handle float
+			// to int conversion
 			if v.CanFloat() {
 				v.SetFloat(data.Float())
 			} else if v.CanInt() {
@@ -393,6 +407,13 @@ func (a *assetManagerImpl) unmarshalFromValues(data reflect.Value, v reflect.Val
 			} else if v.CanUint() {
 				v.SetUint(uint64(data.Float()))
 			}
+		} else if data.Kind() == reflect.String {
+			// the asset.Path type is a string, but we can't just do
+			// v.Set, instead we need to use SetString.  Other types
+			// that are aliased like this might also break
+			v.SetString(data.String())
+		} else if data.Kind() == reflect.Bool {
+			v.SetBool(data.Bool())
 		} else {
 			v.Set(data)
 		}

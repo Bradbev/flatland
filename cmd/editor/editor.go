@@ -32,6 +32,9 @@ func main() {
 	flat.RegisterAllFlatTypes()
 	editors.RegisterAllFlatEditors(gg.ed)
 
+	asset.Save("testobj.json", &editTest{})
+	gg.ed.EditAsset("testobj.json")
+
 	ebiten.RunGame(gg)
 }
 
@@ -48,7 +51,7 @@ type editTest struct {
 	hidden float32
 
 	// Path is filtered using the tag "filter" to files containing the text "json"
-	Path asset.Path `filter:"json"`
+	Path asset.Path `flat:"Path (json filter)" filter:"json"`
 
 	// NestedImmediate is renamed using the tag "flat"
 	NestedImmediate struct {
@@ -97,7 +100,6 @@ func (g *G) Update() error {
 				}
 			}()
 
-			g.ed.Edit(&test)
 		}()
 	}
 	g.mgr.EndFrame()

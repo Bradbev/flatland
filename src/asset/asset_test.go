@@ -29,7 +29,7 @@ func TestAssetLoad(t *testing.T) {
 }`
 	testAssetLoad := func(callback func()) {
 		defer asset.Reset()
-		name := "asset.json"
+		name := asset.Path("asset.json")
 		callback()
 		newTestAsset(name, data)
 
@@ -50,9 +50,9 @@ func TestAssetLoad(t *testing.T) {
 	})
 }
 
-func newTestAsset(name string, data string) {
+func newTestAsset(name asset.Path, data string) {
 	rootFS := memfs.New()
-	rootFS.WriteFile(name, []byte(data), 0777)
+	rootFS.WriteFile(string(name), []byte(data), 0777)
 	asset.RegisterFileSystem(rootFS, 0)
 }
 
@@ -66,8 +66,8 @@ func newWriteFS() *writeFS {
 	}
 }
 
-func (f *writeFS) WriteFile(path string, data []byte) error {
-	return f.fs.WriteFile(path, data, 0777)
+func (f *writeFS) WriteFile(path asset.Path, data []byte) error {
+	return f.fs.WriteFile(string(path), data, 0777)
 }
 
 type js = map[string]any
@@ -78,12 +78,12 @@ func TestAssetSave(t *testing.T) {
 	asset.RegisterWritableFileSystem(wfs)
 	asset.RegisterAsset(testAsset{})
 
-	name := "asset.json"
+	name := asset.Path("asset.json")
 	a := &testAsset{Anykey: "saved"}
 	err := asset.Save(name, a)
 	assert.NoError(t, err)
 
-	back, err := fs.ReadFile(wfs.fs, name)
+	back, err := fs.ReadFile(wfs.fs, string(name))
 	assert.NoError(t, err)
 
 	jsonBack := js{}

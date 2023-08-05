@@ -34,24 +34,33 @@ func TestBuildJsonToSave(t *testing.T) {
 	}
 
 	a := assetManagerImpl{
-		AssetToLoadPath: map[Asset]string{},
+		AssetToLoadPath: map[Asset]Path{},
 	}
 	a.AssetToLoadPath[&leaf] = "fullPath.json"
 	m := a.buildJsonToSave(node)
 
-	j, err := json.MarshalIndent(m, "", "  ")
+	j, err := json.MarshalIndent(m, "", "")
 	assert.NoError(t, err)
 
 	expected :=
 		`{
-  "Inline": {
-    "Leaf": "Inline"
-  },
-  "Name": "Node",
-  "Ref": {
-    "Type": "flatland/src/asset.testLeaf",
-    "Path": "fullPath.json"
-  }
+"Array": [
+0,
+0
+],
+"Flt": 0,
+"Inline": {
+"Leaf": "Inline"
+},
+"MissingValue": 0,
+"Name": "Node",
+"Num": 0,
+"Ref": {
+"Type": "flatland/src/asset.testLeaf",
+"Path": "fullPath.json"
+},
+"Slice": null,
+"Small": 0
 }`
 
 	assert.Equal(t, expected, string(j))
@@ -82,8 +91,8 @@ func TestUnmashallFromAny(t *testing.T) {
 	assert.NoError(t, err)
 
 	a := assetManagerImpl{
-		AssetToLoadPath: map[Asset]string{},
-		LoadPathToAsset: map[string]Asset{},
+		AssetToLoadPath: map[Asset]Path{},
+		LoadPathToAsset: map[Path]Asset{},
 	}
 	leaf := testLeaf{Leaf: "RefLeaf"}
 	a.AssetToLoadPath[&leaf] = "fullPath.json"

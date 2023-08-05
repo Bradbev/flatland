@@ -20,7 +20,7 @@ func main() {
 	mgr := renderer.New(nil)
 
 	ebiten.SetWindowSize(1024, 768)
-	ebiten.SetWindowResizable(true)
+	ebiten.SetWindowResizingMode(ebiten.WindowResizingModeEnabled)
 
 	gg := &G{
 		mgr:    mgr,
@@ -74,7 +74,7 @@ type G struct {
 }
 
 func (g *G) Draw(screen *ebiten.Image) {
-	ebitenutil.DebugPrintAt(screen, fmt.Sprintf("TPS: %.2f\nFPS: %.2f\n[C]lipMask: %t", ebiten.CurrentTPS(), ebiten.CurrentFPS(), g.mgr.ClipMask), 10, 2)
+	ebitenutil.DebugPrintAt(screen, fmt.Sprintf("TPS: %.3f\nFPS: %.2f\n", ebiten.ActualTPS(), ebiten.ActualFPS()), 11, 2)
 	g.mgr.Draw(screen)
 }
 
@@ -115,10 +115,6 @@ func (g *G) debugWindow() {
 	if g.showDemoWindow {
 		imgui.ShowDemoWindow(&g.showDemoWindow)
 	}
-}
-
-func lerp(a, b, t float64) float64 {
-	return a*(1-t) + b*t
 }
 
 func (g *G) Layout(outsideWidth, outsideHeight int) (int, int) {

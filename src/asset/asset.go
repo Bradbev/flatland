@@ -319,16 +319,16 @@ func (a *assetManagerImpl) unmarshalFromAny(data any, v any) error {
 }
 
 func (a *assetManagerImpl) unmarshalFromValues(data reflect.Value, v reflect.Value) error {
-	fmt.Printf("v:%#v settable? %v kind %s\n", v, v.CanSet(), v.Kind())
-	fmt.Printf("data:%#v kind %s\n", data, data.Kind())
+	//fmt.Printf("v:%#v settable? %v kind %s\n", v, v.CanSet(), v.Kind())
+	//fmt.Printf("data:%#v kind %s\n", data, data.Kind())
 	t := v.Type()
 	switch v.Kind() {
 	case reflect.Pointer:
 		fmt.Printf("Handle ptr")
 		// There will be a serialized assetLoadPath in data
 		lp := data.Interface().(map[string]any)
-		path := lp["Path"].(Path)
-		asset := a.LoadPathToAsset[path]
+		path := lp["Path"].(string)
+		asset := a.LoadPathToAsset[Path(path)]
 		fmt.Printf("Pointer %#v\n", data)
 		fmt.Printf("asset %#v\n", asset)
 		v.Set(reflect.ValueOf(asset))
@@ -338,10 +338,10 @@ func (a *assetManagerImpl) unmarshalFromValues(data reflect.Value, v reflect.Val
 			fieldToSet := v.Field(i)
 			key := reflect.ValueOf(t.Field(i).Name)
 			dataToRead := data.MapIndex(key)
-			fmt.Printf("Key %v Data %v\n", key, dataToRead)
+			//fmt.Printf("Key %v Data %v\n", key, dataToRead)
 
 			if dataToRead.Kind() == reflect.Invalid {
-				log.Printf("D is missing, skipping")
+				log.Printf("dataToRead for key (%s) is missing, skipping", key)
 				continue
 			}
 			a.unmarshalFromValues(dataToRead.Elem(), fieldToSet)
@@ -353,7 +353,7 @@ func (a *assetManagerImpl) unmarshalFromValues(data reflect.Value, v reflect.Val
 		for i := 0; i < data.Len(); i++ {
 			indexToSet := v.Index(i)
 			dataToRead := data.Index(i)
-			fmt.Printf("Array Data %v\n", dataToRead)
+			//fmt.Printf("Array Data %v\n", dataToRead)
 			a.unmarshalFromValues(dataToRead.Elem(), indexToSet)
 		}
 	default:

@@ -33,6 +33,8 @@ type ImguiEditor struct {
 
 	drawables []Drawable
 
+	pie pieManager
+
 	// texture handling
 	nextTextureID    imgui.TextureID
 	embeddedTextures map[any]embeddedTexture
@@ -53,7 +55,7 @@ type Drawable interface {
 var closeDrawable = errors.New("Close")
 
 func New(path string, manager *renderer.Manager) *ImguiEditor {
-	ret := &ImguiEditor{
+	ed := &ImguiEditor{
 		Manager:    manager,
 		context:    map[unsafe.Pointer]map[any]any{},
 		typeEditor: newTypeEditor(),
@@ -65,15 +67,16 @@ func New(path string, manager *renderer.Manager) *ImguiEditor {
 		nextTextureID:    100,
 		embeddedTextures: map[any]embeddedTexture{},
 	}
-	ret.typeEditor.ed = ret
+	ed.typeEditor.ed = ed
+	ed.pie.ed = ed
 
-	asset.RegisterFileSystem(ret.fsysRead, 0)
-	asset.RegisterWritableFileSystem(ret.fsysWrite)
+	asset.RegisterFileSystem(ed.fsysRead, 0)
+	asset.RegisterWritableFileSystem(ed.fsysWrite)
 
-	contentWindow := newContentWindow(ret)
-	ret.AddDrawable(contentWindow)
+	contentWindow := newContentWindow(ed)
+	ed.AddDrawable(contentWindow)
 
-	return ret
+	return ed
 }
 
 // Get a Context item from the ImguiEditor.  Custom editors should
@@ -124,7 +127,13 @@ func (e *ImguiEditor) Update(deltaseconds float32) error {
 	e.drawables = slices.DeleteFunc(e.drawables, func(d Drawable) bool {
 		return toRemove[d]
 	})
+
+	e.pie.Update(deltaseconds)
 	return nil
+}
+
+func (e *ImguiEditor) StartGame(game ebiten.Game) {
+	e.pie.StartGame(game)
 }
 
 func (e *ImguiEditor) AddDrawable(d Drawable) {
@@ -160,6 +169,13 @@ func (e *ImguiEditor) EditAsset(path string) {
 	}
 
 	e.AddDrawable(aew)
+}
+
+func (e *ImguiEditor) RemoveImguiTexture(key any) {
+	if tex, exists := e.embeddedTextures[key]; exists {
+		tex.img.Dispose()
+		delete(e.embeddedTextures, key)
+	}
 }
 
 func (e *ImguiEditor) GetImguiTexture(key any, width int, height int) (id imgui.TextureID, img *ebiten.Image) {

@@ -91,13 +91,13 @@ func GetContext[T any](ed *ImguiEditor, key reflect.Value) (*T, bool) {
 
 	// found the type/value context
 	if context, exists := contexts[zeroT]; exists {
-		return context.(*T), true
+		return context.(*T), false
 	}
 
 	// second level map doesn't exist
 	ret := new(T)
 	contexts[zeroT] = ret
-	return ret, false
+	return ret, true
 }
 
 func (e *ImguiEditor) AddType(typeToAdd any, edit TypeEditorFn) {
@@ -148,7 +148,7 @@ func (e *ImguiEditor) EditAsset(path string) {
 		return
 	}
 
-	loaded, err := asset.Load(path)
+	loaded, err := asset.Load(asset.Path(path))
 	if err != nil {
 		fmt.Println(err)
 		return
@@ -201,7 +201,7 @@ func (e *ImguiEditor) buildFileCache() *fswalk {
 		if path == "." {
 			return nil
 		}
-		if d.IsDir() {
+		if d != nil && d.IsDir() {
 			next := &fswalk{path: path}
 			peek().dirs = append(peek().dirs, next)
 			stack = append(stack, next)

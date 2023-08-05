@@ -1,23 +1,23 @@
 package asset
 
 import (
-	"io/ioutil"
+	"os"
 	"path/filepath"
 )
 
 type WriteableFileSystem interface {
-	WriteFile(path string, data []byte) error
+	WriteFile(path Path, data []byte) error
 }
 
 type writableFS struct {
-	base string
+	base Path
 }
 
-func (f *writableFS) WriteFile(path string, data []byte) error {
-	return ioutil.WriteFile(filepath.Join(f.base, path), data, 0777)
+func (f *writableFS) WriteFile(path Path, data []byte) error {
+	return os.WriteFile(filepath.Join(string(f.base), string(path)), data, 0777)
 }
 
-func NewWritableFS(basepath string) WriteableFileSystem {
+func NewWritableFS(basepath Path) WriteableFileSystem {
 	return &writableFS{
 		base: basepath,
 	}

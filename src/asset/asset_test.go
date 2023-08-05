@@ -111,14 +111,14 @@ func TestAssetList(t *testing.T) {
 	asset.RegisterAsset(testAsset{})
 
 	expected := "flatland/src/asset_test.testAsset"
-	assets := asset.ListAssets()
+	assets := asset.GetAssetDescriptors()
 	assert.Equal(t, expected, assets[0].FullName, "Names don't match")
 }
 func TestAssetCreate(t *testing.T) {
 	defer asset.Reset()
 	asset.RegisterAsset(testAsset{})
 
-	allAssets := asset.ListAssets()
+	allAssets := asset.GetAssetDescriptors()
 
 	obj, err := allAssets[0].Create()
 	assert.NoError(t, err)

@@ -1,6 +1,7 @@
 package editors
 
 import (
+	"flatland/src/asset"
 	"flatland/src/editor"
 	"flatland/src/editor/edgui"
 	"flatland/src/flat"
@@ -20,24 +21,40 @@ func RegisterAllFlatEditors(edit *editor.ImguiEditor) {
 }
 
 type imageEdContext struct {
-	flt float32
+	lastPathTried asset.Path
 }
+
+type aliasImage flat.Image
+
+// The editor will try to call the Name function on an asset
+// if it exists
+func (a *aliasImage) Name() string { return "Custom Image Editor" }
 
 // imageEd is a simple custom editor for flat.Image
 func imageEd(ed *editor.ImguiEditor, value reflect.Value) error {
+	// use this idiom to get a pointer to the underlying value
+	image := value.Addr().Interface().(*flat.Image)
+
 	// If we need to store temp info while editing, use GetContext
 	c, firstTime := editor.GetContext[imageEdContext](ed, value)
 	if firstTime {
-		c.flt = 90
+		c.lastPathTried = image.Path
 	}
 
-	image := value.Addr().Interface().(*flat.Image)
 	{
 		// To edit the same underlying value using the standard struct editor
 		// make a new type so this editor isn't opened
-		type alias flat.Image
-		a := (*alias)(image)
+		a := (*aliasImage)(image)
 		ed.Edit(a)
+	}
+
+	if image.Path != c.lastPathTried {
+		c.lastPathTried = image.Path
+		img := flat.Image{Path: image.Path}
+		img.PostLoad()
+		if img.GetImage() != nil {
+			*image = img
+		}
 	}
 
 	// Custom editor below here
@@ -48,14 +65,12 @@ func imageEd(ed *editor.ImguiEditor, value reflect.Value) error {
 		return nil
 	}
 	size := image.GetImage().Bounds().Size()
-	edgui.Text("Image size (%d, %d)", int(size.X), int(size.Y))
 
-	// use the context so that the c.flt value is preserved
-	imgui.SliderFloat("Rotation", &c.flt, 0, 360)
-
-	w := winSize.X
+	w := winSize.X - 50
 	scale := f64(w) / f64(size.X)
 	h := f64(size.Y) * scale
+	edgui.Text("Image size (%d, %d) scale %f", int(size.X), int(size.Y), scale)
+	edgui.Text("Scaled size (%v, %v)", w, h)
 
 	// Use GetImguiTexture/imgui.Image(id) to put ebitengine Images
 	// into an imgui context
@@ -65,9 +80,6 @@ func imageEd(ed *editor.ImguiEditor, value reflect.Value) error {
 		// scale and draw the image
 		op := ebiten.DrawImageOptions{}
 		op.GeoM.Scale(scale, scale)
-		op.GeoM.Translate(-f64(w)/2, -h/2)
-		op.GeoM.Rotate(flat.DegToRad(f64(c.flt)))
-		op.GeoM.Translate(f64(w)/2, h/2)
 		img.Fill(color.Black)
 		img.DrawImage(image.GetImage(), &op)
 	}

@@ -155,7 +155,7 @@ func (c *contentWindow) drawAddAssetModal() {
 			imgui.BeginChildV("Assets", imgui.Vec2{}, true, 0)
 			defer imgui.EndChild()
 			//edgui.Text("Assets")
-			for _, a := range asset.ListAssets() {
+			for _, a := range asset.GetAssetDescriptors() {
 				imgui.TreeNodeV(a.Name, imgui.TreeNodeFlagsLeaf|imgui.TreeNodeFlagsNoTreePushOnOpen)
 				if imgui.IsItemClicked() {
 					c.assetToCreate = a
@@ -169,7 +169,7 @@ func (c *contentWindow) createNewAsset(a *asset.AssetDescriptor) {
 	obj, err := a.Create()
 	_ = err
 	dest := filepath.Join(c.SelectedDir, c.newAssetName) + ".json"
-	err = asset.Save(dest, obj)
+	err = asset.Save(asset.Path(dest), obj)
 	if err != nil {
 		fmt.Printf("error %v\n", err)
 		//c.editor.raiseError(err)

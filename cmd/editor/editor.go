@@ -47,6 +47,10 @@ type editTest struct {
 	Int    int
 	hidden float32
 
+	// Path is filtered using the tag "filter" to files containing the text "json"
+	Path asset.Path `filter:"json"`
+
+	// NestedImmediate is renamed using the tag "flat"
 	NestedImmediate struct {
 		NestedFloat  float32
 		NestedFloat2 float32
@@ -74,6 +78,8 @@ func (g *G) Draw(screen *ebiten.Image) {
 	g.mgr.Draw(screen)
 }
 
+var autoS string
+
 func (g *G) Update() error {
 	g.mgr.Update(1.0 / 60.0)
 	if inpututil.IsKeyJustPressed(ebiten.KeyC) {
@@ -87,6 +93,7 @@ func (g *G) Update() error {
 			defer func() {
 				if err := recover(); err != nil {
 					fmt.Println(err)
+					fmt.Println("Recovered")
 				}
 			}()
 

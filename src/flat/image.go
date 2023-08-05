@@ -12,7 +12,7 @@ import (
 )
 
 type Image struct {
-	Path string
+	Path asset.Path `filter:"png"`
 	img  *ebiten.Image
 }
 
@@ -26,7 +26,8 @@ func (i *Image) PostLoad() {
 
 	img, _, err := image.Decode(bytes.NewReader(content))
 	if err != nil {
-		log.Fatal(err)
+		log.Print(err)
+		return
 	}
 	i.img = ebiten.NewImageFromImage(img)
 }

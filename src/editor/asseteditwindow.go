@@ -17,6 +17,10 @@ func (a *assetEditWindow) Draw() error {
 	defer imgui.End()
 	open := true
 	if imgui.BeginV(a.path, &open, 0) {
+		imgui.SameLineV(0, imgui.WindowWidth()-80)
+		if imgui.Button("Save") {
+			asset.Save(asset.Path(a.path), a.target)
+		}
 		a.editor.typeEditor.Edit(a.target)
 	}
 	if !open {

@@ -5,10 +5,12 @@ import (
 	"flatland/src/asset"
 	"flatland/src/editor/edgui"
 	"fmt"
+	"io/fs"
 	"log"
 	"os"
 	"path/filepath"
 	"reflect"
+	"strings"
 
 	"github.com/inkyblackness/imgui-go/v4"
 )
@@ -28,8 +30,8 @@ type editorWriteFS struct {
 	base string
 }
 
-func (e *editorWriteFS) WriteFile(path string, data []byte) error {
-	return os.WriteFile(filepath.Join(e.base, path), data, 0777)
+func (e *editorWriteFS) WriteFile(path asset.Path, data []byte) error {
+	return os.WriteFile(filepath.Join(e.base, string(path)), data, 0777)
 }
 
 func WriteFS(base string) asset.WriteableFileSystem {
@@ -85,12 +87,13 @@ func (e *typeEditor) addPrimitiveTypes() {
 	e.AddType(new(bool), boolEdit)
 	e.AddType(new(string), stringEdit)
 	e.AddType(new(int), intEdit)
+	e.AddType(new(asset.Path), pathEd)
 }
 
 // primitive type handler funcs below here
 
-type structEdContext struct {
-	FieldNameOverride string
+type fieldEditContext struct {
+	fieldNameOverride string
 }
 
 func structEd(types *ImguiEditor, value reflect.Value) error {
@@ -98,11 +101,21 @@ func structEd(types *ImguiEditor, value reflect.Value) error {
 	if t.Kind() != reflect.Struct {
 		logger.Fatalf("Not a struct - %v", t.Kind())
 	}
+
+	// select the name for this struct edit
+	// Typename, NamedAsset, FieldNameOverride
 	name, _ := asset.TypeName(t)
+	if value.CanAddr() {
+		iface := value.Addr().Interface()
+		if namedAsset, ok := iface.(asset.NamedAsset); ok {
+			name = namedAsset.Name()
+		}
+	}
 	// If this is a nested type, the higher stack level might have
 	// wanted to override the name
-	if ctx, ok := GetContext[structEdContext](types, value); ok {
-		name = ctx.FieldNameOverride
+	ctx, _ := GetContext[fieldEditContext](types, value)
+	if ctx.fieldNameOverride != "" {
+		name = ctx.fieldNameOverride
 	}
 	edgui.TreeNodeWithPop(name, imgui.TreeNodeFlagsDefaultOpen, func() {
 		imgui.BeginTable(name+"##table", 2)
@@ -110,15 +123,19 @@ func structEd(types *ImguiEditor, value reflect.Value) error {
 			field := value.Field(i)
 			structField := t.Field(i)
 			if structField.IsExported() {
+				sfContext, _ := GetContext[*reflect.StructField](types, field)
+				*sfContext = &structField
+
 				if structField.Type.Kind() == reflect.Struct {
+					// structs are a new TreeNode
 					// disable the current table, edit the value
 					// in a new tree node and then restart the table
 					imgui.EndTable()
 					// set the name for the new tree
-					ctx, _ := GetContext[structEdContext](types, field)
-					ctx.FieldNameOverride = structField.Name
+					ctx, _ := GetContext[fieldEditContext](types, field)
+					ctx.fieldNameOverride = structField.Name
 					if name, ok := structField.Tag.Lookup("flat"); ok {
-						ctx.FieldNameOverride = name
+						ctx.fieldNameOverride = name
 					}
 					types.EditValue(field.Addr())
 					imgui.BeginTable(name+"##table", 2)
@@ -186,5 +203,49 @@ func intEdit(types *ImguiEditor, value reflect.Value) error {
 		imgui.InputInt("", &i32)
 		value.SetInt(int64(i32))
 	})
+	return nil
+}
+
+type pathEdContext struct {
+	auto *edgui.AutoComplete
+}
+
+func pathEd(ed *ImguiEditor, value reflect.Value) error {
+	onActivated := func() []string {
+		structFieldPtr, _ := GetContext[*reflect.StructField](ed, value)
+		structField := *structFieldPtr
+		val, _ := structField.Tag.Lookup("filter")
+		filters := strings.Split(strings.ToLower(val), ",")
+
+		var items []string
+		asset.WalkFiles(func(path string, d fs.DirEntry, err error) error {
+			// do not include directories
+			if d != nil && d.IsDir() {
+				return nil
+			}
+			// include everything if there is no filter
+			if len(filters) == 0 {
+				items = append(items, path)
+				return nil
+			}
+			// otherwise only show files that contain the filter
+			for _, filter := range filters {
+				if strings.Contains(path, filter) {
+					items = append(items, path)
+					return nil
+				}
+			}
+			return nil
+		})
+		return items
+	}
+
+	c, firstTime := GetContext[pathEdContext](ed, value)
+	if firstTime {
+		c.auto = &edgui.AutoComplete{}
+	}
+	path := value.Addr().Interface().(*asset.Path)
+	s := (*string)(path)
+	c.auto.InputText("", s, onActivated)
 	return nil
 }

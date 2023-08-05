@@ -30,6 +30,18 @@ import (
 
 var log = systemLog.New(os.Stderr, "Asset", systemLog.Ltime)
 
+// Path is a distinct type from string so that the editor package
+// can present an autocomplete window.
+// The editor also understands the `filter` tag when used with Path,
+// for example
+//
+//	struct {
+//	  P Path `filter:"png,jpg"`
+//	}
+//
+// will only show files that contain the text 'png' or 'jpg'
+type Path string
+
 type AssetDescriptor struct {
 	Name     string
 	FullName string
@@ -43,6 +55,12 @@ type PostLoadingAsset interface {
 
 type PreSavingAsset interface {
 	PreSave()
+}
+
+// NamedAsset allows assets to provide a different Name
+// The editor will use this Name instead of the struct name
+type NamedAsset interface {
+	Name() string
 }
 
 type FactoryFunc func() (Asset, error)
@@ -71,23 +89,29 @@ func RegisterAsset(zeroAsset any) bool {
 	return true
 }
 
-func ReadFile(assetPath string) ([]byte, error) {
+func ReadFile(assetPath Path) ([]byte, error) {
 	return assetManager.ReadFile(assetPath)
 }
 
-func Load(assetPath string) (Asset, error) {
+func Load(assetPath Path) (Asset, error) {
 	return assetManager.Load(assetPath)
 }
 
-func Save(path string, toSave Asset) error {
+func Save(path Path, toSave Asset) error {
 	return assetManager.Save(path, toSave)
+}
+
+// WalkFiles is like fs.WalkDir, but it will walk all the readable file systems
+// registered with asset.RegisterFileSystem
+func WalkFiles(fn fs.WalkDirFunc) error {
+	return assetManager.WalkFiles(fn)
 }
 
 func Reset() {
 	assetManager = newAssetManagerImpl()
 }
 
-func ListAssets() []*AssetDescriptor {
+func GetAssetDescriptors() []*AssetDescriptor {
 	return assetManager.AssetDescriptorList
 }
 
@@ -117,10 +141,10 @@ type assetManagerImpl struct {
 	// This map tracks in-memory assets to their load path
 	// it is needed when assets are saved to convert the Asset
 	// to a path
-	AssetToLoadPath map[Asset]string
+	AssetToLoadPath map[Asset]Path
 
 	// The opposite mapping
-	LoadPathToAsset map[string]Asset
+	LoadPathToAsset map[Path]Asset
 }
 
 type fsWrapper struct {
@@ -134,8 +158,8 @@ func newAssetManagerImpl() *assetManagerImpl {
 	return &assetManagerImpl{
 		FileSystems:      []*fsWrapper{},
 		AssetDescriptors: map[string]*AssetDescriptor{},
-		AssetToLoadPath:  map[Asset]string{},
-		LoadPathToAsset:  map[string]Asset{},
+		AssetToLoadPath:  map[Asset]Path{},
+		LoadPathToAsset:  map[Path]Asset{},
 	}
 }
 
@@ -147,14 +171,32 @@ func (a *assetManagerImpl) AddFS(wrapper *fsWrapper) error {
 	return nil
 }
 
-func (a *assetManagerImpl) ReadFile(path string) ([]byte, error) {
+func (a *assetManagerImpl) ReadFile(path Path) ([]byte, error) {
 	for _, fsys := range a.FileSystems {
-		data, err := fs.ReadFile(fsys.FileSystem, path)
+		data, err := fs.ReadFile(fsys.FileSystem, string(path))
 		if err == nil {
 			return data, nil
 		}
 	}
 	return nil, fmt.Errorf("Unable to find path (%s) in any registered FS ", path)
+}
+
+func (a *assetManagerImpl) WalkFiles(fn fs.WalkDirFunc) error {
+	var e error
+	for _, fsys := range a.FileSystems {
+		err := fs.WalkDir(fsys.FileSystem, ".", func(path string, d fs.DirEntry, err error) error {
+			e = fn(path, d, err)
+			return e
+		})
+		if err != nil {
+			return err
+		}
+		// if fn has requested SkipAll, then we early out
+		if e == fs.SkipAll {
+			return nil
+		}
+	}
+	return e
 }
 
 func (a *assetManagerImpl) RegisterAssetFactory(zeroAsset any, factoryFunction FactoryFunc) {
@@ -177,7 +219,7 @@ type saveableAssetContainer struct {
 	Inner interface{}
 }
 
-func (a *assetManagerImpl) Save(path string, toSave Asset) error {
+func (a *assetManagerImpl) Save(path Path, toSave Asset) error {
 	if assetManager.WriteFS == nil {
 		return fmt.Errorf("Can't Save asset - no writable FS")
 	}
@@ -200,7 +242,7 @@ func (a *assetManagerImpl) Save(path string, toSave Asset) error {
 	if err != nil {
 		return err
 	}
-	if !strings.HasSuffix(path, ".json") {
+	if !strings.HasSuffix(string(path), ".json") {
 		path = path + ".json"
 	}
 	a.AssetToLoadPath[toSave] = path
@@ -209,7 +251,7 @@ func (a *assetManagerImpl) Save(path string, toSave Asset) error {
 
 type assetLoadPath struct {
 	Type string
-	Path string
+	Path Path
 }
 
 func (a *assetManagerImpl) buildJsonToSave(obj any) any {
@@ -239,7 +281,7 @@ func (a *assetManagerImpl) buildJsonToSave(obj any) any {
 	}
 }
 
-func (a *assetManagerImpl) Load(assetPath string) (Asset, error) {
+func (a *assetManagerImpl) Load(assetPath Path) (Asset, error) {
 	data, err := assetManager.ReadFile(assetPath)
 	if err != nil {
 		return nil, err
@@ -285,7 +327,7 @@ func (a *assetManagerImpl) unmarshalFromValues(data reflect.Value, v reflect.Val
 		fmt.Printf("Handle ptr")
 		// There will be a serialized assetLoadPath in data
 		lp := data.Interface().(map[string]any)
-		path := lp["Path"].(string)
+		path := lp["Path"].(Path)
 		asset := a.LoadPathToAsset[path]
 		fmt.Printf("Pointer %#v\n", data)
 		fmt.Printf("asset %#v\n", asset)

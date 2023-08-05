@@ -25,11 +25,7 @@ func (a *assetEditWindow) Draw() error {
 	}
 	if !open {
 		// If there is context from the editor, delete it
-		addr := reflect.ValueOf(a.target).UnsafePointer()
-		if _, exists := a.editor.context[addr]; exists {
-			delete(a.editor.context, addr)
-		}
-
+		DisposeContext(a.editor, reflect.ValueOf(a.target))
 		return closeDrawable
 	}
 	return nil

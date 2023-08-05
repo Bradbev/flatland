@@ -15,3 +15,12 @@ It should be easy to use and intuitive, but also well designed.
 # Done
 - Create a custom asset editor
 - Create an asset in the editor
+
+
+# imgui and context
+I have a context and initialization problem.
+imgui is lexically scoped and oriented.  It doesn't do super well with
+state at a distance from the current scope.  In other words, how do
+I pass state around a callstack?
+How do I start something the first time through the loop?
+How do I know something is done with?

@@ -79,6 +79,12 @@ func New(path string, manager *renderer.Manager) *ImguiEditor {
 	return ed
 }
 
+// if a type stored by using GetContext implements Disposable
+// then Dispose will be called when the asset editor window is closed
+type Disposable interface {
+	Dispose(ed *ImguiEditor)
+}
+
 // Get a Context item from the ImguiEditor.  Custom editors should
 // use this function to save off context during edits
 // returns true if this is the first time the context has been created
@@ -101,6 +107,19 @@ func GetContext[T any](ed *ImguiEditor, key reflect.Value) (*T, bool) {
 	ret := new(T)
 	contexts[zeroT] = ret
 	return ret, true
+}
+
+func DisposeContext(ed *ImguiEditor, key reflect.Value) {
+	ptr := key.UnsafePointer()
+	if contexts, exists := ed.context[ptr]; exists {
+		for _, value := range contexts {
+			if dispose, ok := value.(Disposable); ok {
+				dispose.Dispose(ed)
+			}
+		}
+
+		delete(ed.context, ptr)
+	}
 }
 
 func (e *ImguiEditor) AddType(typeToAdd any, edit TypeEditorFn) {
@@ -171,13 +190,13 @@ func (e *ImguiEditor) EditAsset(path string) {
 	e.AddDrawable(aew)
 }
 
-func (e *ImguiEditor) RemoveImguiTexture(key any) {
-	if tex, exists := e.embeddedTextures[key]; exists {
-		tex.img.Dispose()
-		delete(e.embeddedTextures, key)
-	}
-}
-
+// GetImguiTexture creates a new ebiten.Image of size width, height and registers
+// the image into the imgui texture system.  The return values are
+// the id that can be used with imgui.Image() and the img can be used with
+// ebiten code.
+// When called repeatedly with the same key, no real work will be done, and
+// cached values are returned.  If the size changes then the old texture is
+// disposed
 func (e *ImguiEditor) GetImguiTexture(key any, width int, height int) (id imgui.TextureID, img *ebiten.Image) {
 	if tex, exists := e.embeddedTextures[key]; exists {
 		s := tex.img.Bounds().Size()
@@ -197,6 +216,13 @@ func (e *ImguiEditor) GetImguiTexture(key any, width int, height int) (id imgui.
 	e.embeddedTextures[key] = tex
 	e.nextTextureID++
 	return tex.id, tex.img
+}
+
+func (e *ImguiEditor) DisposeImguiTexture(key any) {
+	if tex, exists := e.embeddedTextures[key]; exists {
+		tex.img.Dispose()
+		delete(e.embeddedTextures, key)
+	}
 }
 
 type fswalk struct {

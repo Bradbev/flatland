@@ -22,6 +22,11 @@ func RegisterAllFlatEditors(edit *editor.ImguiEditor) {
 
 type imageEdContext struct {
 	lastPathTried asset.Path
+	img           *flat.Image
+}
+
+func (i *imageEdContext) Dispose(ed *editor.ImguiEditor) {
+	ed.DisposeImguiTexture(i.img)
 }
 
 type aliasImage flat.Image
@@ -31,6 +36,7 @@ type aliasImage flat.Image
 func (a *aliasImage) Name() string { return "Custom Image Editor" }
 
 // imageEd is a simple custom editor for flat.Image
+// HOW DO I CLEAN UP RESOURCES FOR THIS EDITOR?
 func imageEd(ed *editor.ImguiEditor, value reflect.Value) error {
 	// use this idiom to get a pointer to the underlying value
 	image := value.Addr().Interface().(*flat.Image)
@@ -39,6 +45,7 @@ func imageEd(ed *editor.ImguiEditor, value reflect.Value) error {
 	c, firstTime := editor.GetContext[imageEdContext](ed, value)
 	if firstTime {
 		c.lastPathTried = image.Path
+		c.img = image
 	}
 
 	{
@@ -75,7 +82,6 @@ func imageEd(ed *editor.ImguiEditor, value reflect.Value) error {
 	// Use GetImguiTexture/imgui.Image(id) to put ebitengine Images
 	// into an imgui context
 	id, img := ed.GetImguiTexture(image, int(w), int(h))
-
 	{
 		// scale and draw the image
 		op := ebiten.DrawImageOptions{}

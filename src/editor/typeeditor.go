@@ -148,12 +148,19 @@ func (e *typeEditor) EditValue(context *TypeEditContext, value reflect.Value) {
 	// Get at the value being pointed to
 	value = value.Elem()
 	edFn := e.typeEditFuncs[fullName]
-	if edFn == nil && value.Kind() == reflect.Struct {
-		edFn = structEd
+	if edFn == nil {
+		switch value.Kind() {
+		case reflect.Struct:
+			edFn = structEd
+		case reflect.Array:
+			fallthrough
+		case reflect.Slice:
+			edFn = sliceEd
+		}
 	}
 
 	if edFn == nil {
-		logger.Printf("No editor for %s", fullName)
+		logger.Printf("No editor for %s (Kind: %s)", fullName, value.Kind().String())
 		return
 	}
 	if !value.CanSet() {
@@ -179,24 +186,8 @@ func structEd(context *TypeEditContext, value reflect.Value) error {
 		logger.Fatalf("Not a struct - %v", t.Kind())
 	}
 
-	// select the treeNodeName for this struct edit
-	// Typename, NamedAsset, FieldNameOverride
-	treeNodeName, _ := asset.TypeName(t)
-	if value.CanAddr() {
-		iface := value.Addr().Interface()
-		if namedAsset, ok := iface.(asset.NamedAsset); ok {
-			treeNodeName = namedAsset.Name()
-		}
-	}
-	// If this is a nested type, the higher stack level might have
-	// wanted to override the name
-	if sf := context.StructField(); sf != nil {
-		if override, ok := sf.Tag.Lookup("flat"); ok {
-			treeNodeName = override
-		}
-	}
-
-	edgui.TreeNodeWithPop(treeNodeName, imgui.TreeNodeFlagsDefaultOpen, func() {
+	treeNodeName := getNodeName(context, value)
+	edgui.TreeNodeWithPop(treeNodeName+"##structEd", imgui.TreeNodeFlagsDefaultOpen, func() {
 		imgui.BeginTable(treeNodeName+"##table", 2)
 		for i := 0; i < t.NumField(); i++ {
 			field := value.Field(i)
@@ -205,34 +196,117 @@ func structEd(context *TypeEditContext, value reflect.Value) error {
 				context.PushStructField(&structField)
 				defer context.PopStructField()
 				if structField.IsExported() {
-					if structField.Type.Kind() == reflect.Struct {
+					switch structField.Type.Kind() {
+					case reflect.Array:
+						fallthrough
+					case reflect.Slice:
+						fallthrough
+					case reflect.Struct:
 						// structs are a new TreeNode
 						// End the current table, edit the value
 						// in a new tree node and then Begin the table again
 						imgui.EndTable()
 						context.EditValue(field.Addr())
 						imgui.BeginTable(treeNodeName+"##table", 2)
-						return
-					}
 
-					imgui.TableNextRow()
+					default:
+						imgui.TableNextRow()
+						imgui.TableNextColumn()
 
-					imgui.TableNextColumn()
-
-					{ // Handle field name overrides
-						fieldName := structField.Name
-						if override, ok := structField.Tag.Lookup("flat"); ok {
-							fieldName = override
+						{ // Handle field name overrides
+							fieldName := structField.Name
+							if override, ok := structField.Tag.Lookup("flat"); ok {
+								fieldName = override
+							}
+							imgui.Text(fieldName)
 						}
-						imgui.Text(fieldName)
-					}
 
-					imgui.TableNextColumn()
-					context.EditValue(field.Addr())
+						imgui.TableNextColumn()
+						context.EditValue(field.Addr())
+					}
 				}
 			}()
 		}
 		imgui.EndTable()
+	})
+
+	return nil
+}
+
+func getNodeName(context *TypeEditContext, value reflect.Value) string {
+	t := value.Type()
+	// select the nodeName for this slice edit
+	// Typename, NamedAsset, FieldNameOverride
+	nodeName, _ := asset.TypeName(t)
+	if value.CanAddr() {
+		iface := value.Addr().Interface()
+		if namedAsset, ok := iface.(asset.NamedAsset); ok {
+			nodeName = namedAsset.Name()
+		}
+	}
+	// If this is a nested type, the higher stack level might have
+	// wanted to override the name
+	if sf := context.StructField(); sf != nil {
+		nodeName = sf.Name
+		if override, ok := sf.Tag.Lookup("flat"); ok {
+			nodeName = override
+		}
+	}
+	return nodeName
+}
+
+func sliceEd(context *TypeEditContext, value reflect.Value) error {
+	t := value.Type()
+	isSlice := t.Kind() == reflect.Slice
+	isArray := t.Kind() == reflect.Array
+	if !isArray && !isSlice {
+		logger.Fatalf("Not a slice or array - %v", t.Kind())
+	}
+
+	treeNodeName := getNodeName(context, value)
+	sliceLen := value.Len()
+	treeNodeName = fmt.Sprintf("%s (%d)", treeNodeName, sliceLen)
+	edgui.TreeNodeWithPop(treeNodeName+"##slicdEd", imgui.TreeNodeFlagsDefaultOpen, func() {
+		edgui.WithID(value, func() {
+			if isSlice {
+				imgui.SameLine()
+				imgui.Text("   ")
+				imgui.SameLine()
+				if imgui.Button("+") {
+					value.Grow(1)
+					value.SetLen(sliceLen + 1)
+					// default init the new item
+					value.Index(sliceLen).Set(reflect.New(value.Index(0).Type()).Elem())
+					sliceLen = value.Len()
+				}
+				imgui.SameLine()
+				if imgui.Button("Clear") {
+					value.SetLen(0)
+					sliceLen = 0
+				}
+			}
+			toDelete := -1
+			for i := 0; i < sliceLen; i++ {
+				edgui.Text("%d", i)
+				imgui.SameLine()
+				index := value.Index(i)
+				edgui.WithID(index, func() {
+					context.EditValue(index.Addr())
+					if isSlice {
+						imgui.SameLine()
+						if imgui.Button("X") {
+							toDelete = i
+						}
+					}
+				})
+			}
+			if toDelete != -1 {
+				for i := toDelete; i < sliceLen-1; i++ {
+					value.Index(i).Set(value.Index(i + 1))
+				}
+				value.SetLen(sliceLen - 1)
+			}
+		})
 	})
 
 	return nil

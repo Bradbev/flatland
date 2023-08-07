@@ -1,6 +1,12 @@
 {
   "Type": "main.editTest",
   "Inner": {
+    "ASlice": null,
+    "Array": [
+      0,
+      0,
+      0
+    ],
     "Bool": false,
     "Flt": 0,
     "Flt64": 0,
@@ -10,10 +16,17 @@
       "NestedFloat": 0,
       "NestedFloat2": 0
     },
-    "NestedIndirect": {
+    "NestedIndirectField": {
       "NestedStr": ""
     },
     "Path": "",
+    "SSlice": null,
+    "Slice": [
+      7,
+      4,
+      5,
+      6
+    ],
     "String": "",
     "SupportNestedCustomEditors": {
       "Path": ""

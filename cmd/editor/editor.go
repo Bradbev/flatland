@@ -32,7 +32,7 @@ func main() {
 	flat.RegisterAllFlatTypes()
 	editors.RegisterAllFlatEditors(gg.ed)
 
-	asset.Save("testobj.json", &editTest{})
+	asset.Save("testobj.json", &defaultTestObject)
 	gg.ed.EditAsset("testobj.json")
 
 	ebiten.RunGame(gg)
@@ -44,6 +44,10 @@ type nestedIndirect struct {
 
 type editTest struct {
 	Flt    float32
+	Slice  []int
+	Array  [3]float32
+	SSlice []string
+	ASlice []nestedIndirect
 	Flt64  float64
 	Bool   bool
 	String string
@@ -58,12 +62,14 @@ type editTest struct {
 		NestedFloat  float32
 		NestedFloat2 float32
 	} `flat:"Override field name from Nested Immediate"`
-	NestedIndirect             nestedIndirect
+	NestedIndirectField        nestedIndirect
 	LastOne                    bool
 	SupportNestedCustomEditors flat.Image
 }
 
-var test editTest
+var defaultTestObject = editTest{
+	Slice: []int{7, 4, 5, 6},
+}
 
 type G struct {
 	mgr *renderer.Manager

@@ -6,21 +6,24 @@ It should be easy to use and intuitive, but also well designed.
 * [Decision Log](decisions.md) - why certain decisions were made
 
 # Next Goal
-- Path selection dialog
-- Save/restore editor state
-- Auto load recursive asset paths? (test it)
 - Create a tiny game that does not include the editor package, but does load the created asset
+- PIE
 - Clean everything up and decide on how the lines of separation need to be drawn
+- Save/restore editor state
+- Parse own code to get doc strings on types?
 
 # Done
+- Auto load recursive asset paths
+- Path selection dialog
 - Create a custom asset editor
 - Create an asset in the editor
 
 
 # imgui and context
-I have a context and initialization problem.
 imgui is lexically scoped and oriented.  It doesn't do super well with
 state at a distance from the current scope.  In other words, how do
-I pass state around a callstack?
-How do I start something the first time through the loop?
-How do I know something is done with?
+I pass state around a callstack, like I want to do with the editor funcs
+(ie, `structEd`)
+The solution I've taken is to pass around a context object (TypeEditorContext)
+that can be used to save edit state.  The context is created when an asset edit
+window opens and is disposed of when the window closes.

@@ -25,8 +25,8 @@ type imageEdContext struct {
 	img           *flat.Image
 }
 
-func (i *imageEdContext) Dispose(ed *editor.ImguiEditor) {
-	ed.DisposeImguiTexture(i.img)
+func (i *imageEdContext) Dispose(context *editor.TypeEditContext) {
+	context.Ed.DisposeImguiTexture(i.img)
 }
 
 type aliasImage flat.Image
@@ -36,7 +36,8 @@ type aliasImage flat.Image
 func (a *aliasImage) Name() string { return "Custom Image Editor" }
 
 // imageEd is a simple custom editor for flat.Image
-// HOW DO I CLEAN UP RESOURCES FOR THIS EDITOR?
+// custom editors should not be in the same package as the asset they
+// edit, otherwise these functions could be pulled into the game binary
 func imageEd(context *editor.TypeEditContext, value reflect.Value) error {
 	// use this idiom to get a pointer to the underlying value
 	image := value.Addr().Interface().(*flat.Image)
@@ -61,6 +62,9 @@ func imageEd(context *editor.TypeEditContext, value reflect.Value) error {
 		img.PostLoad()
 		if img.GetImage() != nil {
 			*image = img
+		}
+		if image.Path == "" {
+			image.Reset()
 		}
 	}
 

@@ -17,7 +17,7 @@ type Image struct {
 }
 
 func (i *Image) PostLoad() {
-	fmt.Printf("Post load %#v\n", i)
+	fmt.Printf("Post load for Image %#v\n", i)
 	content, err := asset.ReadFile(i.Path)
 	if err != nil {
 		log.Print(err)
@@ -30,8 +30,14 @@ func (i *Image) PostLoad() {
 		return
 	}
 	i.img = ebiten.NewImageFromImage(img)
+	fmt.Printf("[Done] Post load for Image %#v\n", i)
 }
 
 func (i *Image) GetImage() *ebiten.Image {
 	return i.img
+}
+
+func (i *Image) Reset() {
+	i.Path = ""
+	i.img = nil
 }

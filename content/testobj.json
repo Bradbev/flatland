@@ -1,0 +1,22 @@
+{
+  "Type": "main.editTest",
+  "Inner": {
+    "Bool": false,
+    "Flt": 0,
+    "Flt64": 0,
+    "Int": 0,
+    "LastOne": false,
+    "NestedImmediate": {
+      "NestedFloat": 0,
+      "NestedFloat2": 0
+    },
+    "NestedIndirect": {
+      "NestedStr": ""
+    },
+    "Path": "",
+    "String": "",
+    "SupportNestedCustomEditors": {
+      "Path": ""
+    }
+  }
+}

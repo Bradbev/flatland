@@ -21,7 +21,6 @@ func (a *assetEditWindow) Draw() error {
 		if imgui.Button("Save") {
 			asset.Save(asset.Path(a.path), a.target)
 		}
-		//a.context.Ed.typeEditor.Edit(a.context, a.target)
 		value := reflect.ValueOf(a.target)
 		a.context.EditValue(value)
 	}

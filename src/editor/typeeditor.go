@@ -9,6 +9,7 @@ import (
 	"log"
 	"reflect"
 	"strings"
+	"unsafe"
 
 	"github.com/inkyblackness/imgui-go/v4"
 )
@@ -19,13 +20,96 @@ type TypeEditorFn func(*TypeEditContext, reflect.Value) error
 
 type TypeEditContext struct {
 	Ed *ImguiEditor
+
+	// editContext is where GetContext saves its data
+	editContext map[unsafe.Pointer]map[any]any
+
+	// the stack of struct fields so nested editors
+	// can see what their field description is
+	structFieldStack []*reflect.StructField
 }
 
+func NewTypeEditContext(ed *ImguiEditor) *TypeEditContext {
+	return &TypeEditContext{
+		Ed:               ed,
+		editContext:      map[unsafe.Pointer]map[any]any{},
+		structFieldStack: []*reflect.StructField{},
+	}
+}
+
+// GetContext exists just to help you find editor.GetContext[T](*TypeEditContext, reflect.Value)
+func (c *TypeEditContext) GetContext(key reflect.Value) {
+	panic("")
+}
+
+// EditValue allows the custom type editors to edit sub parts
+// of themselves without needing to re-implement the editors
 func (c *TypeEditContext) EditValue(value reflect.Value) {
 	c.Ed.typeEditor.EditValue(c, value)
 }
+
+// Edit calls EditValue.  Custom type editors can use this to
+// edit fields.
 func (c *TypeEditContext) Edit(obj any) {
 	c.Ed.typeEditor.Edit(c, obj)
+}
+
+func (c *TypeEditContext) PushStructField(sf *reflect.StructField) {
+	c.structFieldStack = append(c.structFieldStack, sf)
+}
+
+func (c *TypeEditContext) PopStructField() {
+	c.structFieldStack = c.structFieldStack[:len(c.structFieldStack)-1]
+}
+
+func (c *TypeEditContext) StructField() *reflect.StructField {
+	if len(c.structFieldStack) == 0 {
+		return nil
+	}
+	return c.structFieldStack[len(c.structFieldStack)-1]
+}
+
+// if a type stored by using GetContext implements Disposable
+// then Dispose will be called when the asset editor window is closed
+type Disposable interface {
+	Dispose(context *TypeEditContext)
+}
+
+// GetContext returns a *T from the TypeEditContext.  Custom editors should
+// use this function to save off context during edits
+// returns true if this is the first time the context has been created
+func GetContext[T any](context *TypeEditContext, key reflect.Value) (*T, bool) {
+	ptr := key.Addr().UnsafePointer()
+	contexts, contextsExists := context.editContext[ptr]
+	if !contextsExists {
+		// first level map doesn't exist yet
+		contexts = map[any]any{}
+		context.editContext[ptr] = contexts
+	}
+	var zeroT T
+
+	// found the type/value context
+	if context, exists := contexts[zeroT]; exists {
+		return context.(*T), false
+	}
+
+	// second level map doesn't exist
+	ret := new(T)
+	contexts[zeroT] = ret
+	return ret, true
+}
+
+func DisposeContext(context *TypeEditContext, key reflect.Value) {
+	ptr := key.UnsafePointer()
+	if contexts, exists := context.editContext[ptr]; exists {
+		for _, value := range contexts {
+			if dispose, ok := value.(Disposable); ok {
+				dispose.Dispose(context)
+			}
+		}
+
+		delete(context.editContext, ptr)
+	}
 }
 
 type typeEditor struct {
@@ -89,64 +173,64 @@ func (e *typeEditor) addPrimitiveTypes() {
 
 // primitive type handler funcs below here
 
-type fieldEditContext struct {
-	fieldNameOverride string
-}
-
 func structEd(context *TypeEditContext, value reflect.Value) error {
 	t := value.Type()
 	if t.Kind() != reflect.Struct {
 		logger.Fatalf("Not a struct - %v", t.Kind())
 	}
 
-	// select the name for this struct edit
+	// select the treeNodeName for this struct edit
 	// Typename, NamedAsset, FieldNameOverride
-	name, _ := asset.TypeName(t)
+	treeNodeName, _ := asset.TypeName(t)
 	if value.CanAddr() {
 		iface := value.Addr().Interface()
 		if namedAsset, ok := iface.(asset.NamedAsset); ok {
-			name = namedAsset.Name()
+			treeNodeName = namedAsset.Name()
 		}
 	}
 	// If this is a nested type, the higher stack level might have
 	// wanted to override the name
-	ctx, _ := GetContext[fieldEditContext](context, value)
-	if ctx.fieldNameOverride != "" {
-		name = ctx.fieldNameOverride
+	if sf := context.StructField(); sf != nil {
+		if override, ok := sf.Tag.Lookup("flat"); ok {
+			treeNodeName = override
+		}
 	}
-	edgui.TreeNodeWithPop(name, imgui.TreeNodeFlagsDefaultOpen, func() {
-		imgui.BeginTable(name+"##table", 2)
+
+	edgui.TreeNodeWithPop(treeNodeName, imgui.TreeNodeFlagsDefaultOpen, func() {
+		imgui.BeginTable(treeNodeName+"##table", 2)
 		for i := 0; i < t.NumField(); i++ {
 			field := value.Field(i)
 			structField := t.Field(i)
-			if structField.IsExported() {
-				sfContext, _ := GetContext[*reflect.StructField](context, field)
-				*sfContext = &structField
-
-				if structField.Type.Kind() == reflect.Struct {
-					// structs are a new TreeNode
-					// disable the current table, edit the value
-					// in a new tree node and then restart the table
-					imgui.EndTable()
-					// set the name for the new tree
-					ctx, _ := GetContext[fieldEditContext](context, field)
-					ctx.fieldNameOverride = structField.Name
-					if name, ok := structField.Tag.Lookup("flat"); ok {
-						ctx.fieldNameOverride = name
+			func() {
+				context.PushStructField(&structField)
+				defer context.PopStructField()
+				if structField.IsExported() {
+					if structField.Type.Kind() == reflect.Struct {
+						// structs are a new TreeNode
+						// End the current table, edit the value
+						// in a new tree node and then Begin the table again
+						imgui.EndTable()
+						context.EditValue(field.Addr())
+						imgui.BeginTable(treeNodeName+"##table", 2)
+						return
 					}
+
+					imgui.TableNextRow()
+
+					imgui.TableNextColumn()
+
+					{ // Handle field name overrides
+						fieldName := structField.Name
+						if override, ok := structField.Tag.Lookup("flat"); ok {
+							fieldName = override
+						}
+						imgui.Text(fieldName)
+					}
+
+					imgui.TableNextColumn()
 					context.EditValue(field.Addr())
-					imgui.BeginTable(name+"##table", 2)
-					continue
 				}
-
-				imgui.TableNextRow()
-
-				imgui.TableNextColumn()
-				imgui.Text(structField.Name)
-
-				imgui.TableNextColumn()
-				context.EditValue(field.Addr())
-			}
+			}()
 		}
 		imgui.EndTable()
 	})
@@ -209,10 +293,12 @@ type pathEdContext struct {
 
 func pathEd(context *TypeEditContext, value reflect.Value) error {
 	onActivated := func() []string {
-		structFieldPtr, _ := GetContext[*reflect.StructField](context, value)
-		structField := *structFieldPtr
-		val, _ := structField.Tag.Lookup("filter")
-		filters := strings.Split(strings.ToLower(val), ",")
+		filters := []string{}
+		if sf := context.StructField(); sf != nil {
+			val, _ := sf.Tag.Lookup("filter")
+			filters = strings.Split(strings.ToLower(val), ",")
+
+		}
 
 		var items []string
 		asset.WalkFiles(func(path string, d fs.DirEntry, err error) error {

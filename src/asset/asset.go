@@ -364,6 +364,9 @@ func (a *assetManagerImpl) unmarshalFromValues(data reflect.Value, v reflect.Val
 
 	case reflect.Struct:
 		for i := 0; i < t.NumField(); i++ {
+			if !t.Field(i).IsExported() {
+				continue
+			}
 			fieldToSet := v.Field(i)
 			key := reflect.ValueOf(t.Field(i).Name)
 			dataToRead := data.MapIndex(key)

@@ -7,9 +7,7 @@ import (
 	"io/fs"
 	"os"
 	"path/filepath"
-	"reflect"
 	"strings"
-	"unsafe"
 
 	"github.com/gabstv/ebiten-imgui/renderer"
 	"github.com/hajimehoshi/ebiten/v2"
@@ -23,10 +21,7 @@ const errorModalID = "ErrorModal##unique"
 
 type ImguiEditor struct {
 	// Link to the ebiten-imgui/renderer.Manager instance that is running the editor
-	Manager *renderer.Manager
-	// context should be used by custom editors to store their own data across
-	// calls to the edit function
-	context    map[unsafe.Pointer]map[any]any
+	Manager    *renderer.Manager
 	typeEditor *typeEditor
 
 	fsysRead  fs.FS
@@ -58,7 +53,6 @@ var closeDrawable = errors.New("Close")
 func New(path string, manager *renderer.Manager) *ImguiEditor {
 	ed := &ImguiEditor{
 		Manager:    manager,
-		context:    map[unsafe.Pointer]map[any]any{},
 		typeEditor: newTypeEditor(),
 
 		fsysRead:  os.DirFS(path),
@@ -78,51 +72,6 @@ func New(path string, manager *renderer.Manager) *ImguiEditor {
 	ed.AddDrawable(contentWindow)
 
 	return ed
-}
-
-// if a type stored by using GetContext implements Disposable
-// then Dispose will be called when the asset editor window is closed
-type Disposable interface {
-	Dispose(ed *ImguiEditor)
-}
-
-// Get a Context item from the ImguiEditor.  Custom editors should
-// use this function to save off context during edits
-// returns true if this is the first time the context has been created
-func GetContext[T any](context *TypeEditContext, key reflect.Value) (*T, bool) {
-	ed := context.Ed
-	ptr := key.Addr().UnsafePointer()
-	contexts, contextsExists := ed.context[ptr]
-	if !contextsExists {
-		// first level map doesn't exist yet
-		contexts = map[any]any{}
-		ed.context[ptr] = contexts
-	}
-	var zeroT T
-
-	// found the type/value context
-	if context, exists := contexts[zeroT]; exists {
-		return context.(*T), false
-	}
-
-	// second level map doesn't exist
-	ret := new(T)
-	contexts[zeroT] = ret
-	return ret, true
-}
-
-func DisposeContext(context *TypeEditContext, key reflect.Value) {
-	ed := context.Ed
-	ptr := key.UnsafePointer()
-	if contexts, exists := ed.context[ptr]; exists {
-		for _, value := range contexts {
-			if dispose, ok := value.(Disposable); ok {
-				dispose.Dispose(ed)
-			}
-		}
-
-		delete(ed.context, ptr)
-	}
 }
 
 func (e *ImguiEditor) AddType(typeToAdd any, edit TypeEditorFn) {
@@ -177,11 +126,9 @@ func (e *ImguiEditor) EditAsset(path string) {
 		return
 	}
 	aew := &assetEditWindow{
-		path:   path,
-		target: loaded,
-		context: &TypeEditContext{
-			Ed: e,
-		},
+		path:    path,
+		target:  loaded,
+		context: NewTypeEditContext(e),
 	}
 
 	e.AddDrawable(aew)

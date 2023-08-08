@@ -5,6 +5,13 @@ It should be easy to use and intuitive, but also well designed.
 # Table of Contents
 * [Decision Log](decisions.md) - why certain decisions were made
 
+# Open problems
+- The editor and other systems will be reflection heavy, but typical usage 
+for Go reflection is to ignore unexported symbols.  How can I balance out 
+information hiding/abstraction against reflection?
+ - Note, reflection can actually read all symbols and with some hackery write them, but that's going to require building things like my own JSON encoder
+ - Convention might be easiest, ie, for anything you want to save, but be treated as "private", have a naming convention.
+
 # Next Goal
 - Create a tiny game that does not include the editor package, but does load the created asset
 - PIE

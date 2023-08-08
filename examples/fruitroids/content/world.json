@@ -1,0 +1,11 @@
+{
+  "Type": "flatland/src/flat.World",
+  "Inner": {
+    "PersistentActors": [
+      {
+        "Type": "flatland/examples/fruitroids/src/fruitroids.Ship",
+        "Path": "ship.json"
+      }
+    ]
+  }
+}

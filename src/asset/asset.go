@@ -263,6 +263,9 @@ type assetLoadPath struct {
 }
 
 func (a *assetManagerImpl) buildJsonToSave(obj any) any {
+	if obj == nil {
+		return nil
+	}
 	t := reflect.TypeOf(obj)
 	switch t.Kind() {
 	case reflect.Pointer:
@@ -273,17 +276,23 @@ func (a *assetManagerImpl) buildJsonToSave(obj any) any {
 			Path: path,
 		}
 	case reflect.Struct:
-		{
-			m := map[string]any{}
-			for i := 0; i < t.NumField(); i++ {
-				field := t.Field(i)
-				if !field.IsExported() {
-					continue
-				}
-				m[field.Name] = a.buildJsonToSave(reflect.ValueOf(obj).Field(i).Interface())
+		m := map[string]any{}
+		for i := 0; i < t.NumField(); i++ {
+			field := t.Field(i)
+			if !field.IsExported() {
+				continue
 			}
-			return m
+			m[field.Name] = a.buildJsonToSave(reflect.ValueOf(obj).Field(i).Interface())
 		}
+		return m
+	case reflect.Slice:
+		v := reflect.ValueOf(obj)
+		s := make([]any, v.Len())
+		for i := 0; i < v.Len(); i++ {
+			index := v.Index(i)
+			s[i] = a.buildJsonToSave(index.Interface())
+		}
+		return s
 	default:
 		return obj
 	}
@@ -344,32 +353,53 @@ func (a *assetManagerImpl) unmarshalFromAny(data any, v any) error {
 	return a.unmarshalFromValues(reflect.ValueOf(data), reflect.ValueOf(v).Elem())
 }
 
-func (a *assetManagerImpl) unmarshalFromValues(data reflect.Value, v reflect.Value) error {
-	//fmt.Printf("v:%#v settable? %v kind %s\n", v, v.CanSet(), v.Kind())
-	//fmt.Printf("data:%#v kind %s\n", data, data.Kind())
-	t := v.Type()
-	switch v.Kind() {
+func safeLen(value reflect.Value) int {
+	if !value.IsValid() || value.IsZero() || value.IsNil() {
+		return 0
+	}
+	return value.Len()
+}
+
+//var assetType = reflect.ValueOf(new(Asset)).Elem().Type()
+
+func (a *assetManagerImpl) unmarshalFromValues(source reflect.Value, dest reflect.Value) error {
+	//fmt.Printf("v:%#v \nsettable? %v \nkind %s\n", v, v.CanSet(), v.Kind())
+	//fmt.Printf("data:%#v \nkind %s\n-----\n", data, data.Kind())
+	t := dest.Type()
+	switch dest.Kind() {
+	case reflect.Interface:
+		//fmt.Println("Handle interface (fallthrough to pointer)")
+		fallthrough
 	case reflect.Pointer:
-		fmt.Printf("Handle ptr")
+		//fmt.Println("Handle ptr")
 		// There will be a serialized assetLoadPath in data
-		lp := data.Interface().(map[string]any)
-		path := lp["Path"].(string)
+		if !source.IsValid() {
+			return fmt.Errorf("attempt to load pointer, but not valid")
+		}
+		if source.IsNil() {
+			return fmt.Errorf("attempt to load pointer, but is nil")
+		}
+		loadPathInfo, ok := source.Interface().(map[string]any)
+		if !ok {
+			return fmt.Errorf("unable to cast %v to map[string]any", source)
+		}
+		path := loadPathInfo["Path"].(string)
 		asset, err := a.Load(Path(path))
-		fmt.Printf("Pointer %#v\n", data)
-		fmt.Printf("asset %#v\n", asset)
+		//fmt.Printf("Disk link %#v\n", data)
+		//fmt.Printf("asset %#v\n", asset)
 		if err != nil {
 			return fmt.Errorf("unable to load asset at path %s", path)
 		}
-		v.Set(reflect.ValueOf(asset))
+		dest.Set(reflect.ValueOf(asset))
 
 	case reflect.Struct:
 		for i := 0; i < t.NumField(); i++ {
 			if !t.Field(i).IsExported() {
 				continue
 			}
-			fieldToSet := v.Field(i)
+			fieldToSet := dest.Field(i)
 			key := reflect.ValueOf(t.Field(i).Name)
-			dataToRead := data.MapIndex(key)
+			dataToRead := source.MapIndex(key)
 			//fmt.Printf("Key %v Data %v\n", key, dataToRead)
 
 			if dataToRead.Kind() == reflect.Invalid {
@@ -379,46 +409,48 @@ func (a *assetManagerImpl) unmarshalFromValues(data reflect.Value, v reflect.Val
 			a.unmarshalFromValues(dataToRead.Elem(), fieldToSet)
 		}
 	case reflect.Slice:
-		v.Set(reflect.MakeSlice(v.Type(), data.Len(), data.Len()))
+		l := safeLen(source)
+		dest.Set(reflect.MakeSlice(dest.Type(), l, l))
 		fallthrough
 	case reflect.Array:
-		if data.Len() > 0 && v.Index(0).Kind() == reflect.Uint8 {
+		l := safeLen(source)
+		if l > 0 && dest.Index(0).Kind() == reflect.Uint8 {
 			// byte slices are uuencoded into a string
-			encoded := data.String()
+			encoded := source.String()
 			decoded, err := base64.StdEncoding.DecodeString(encoded)
 			if err != nil {
 				return err
 			}
 			//fmt.Printf("%v %v\n", decoded, string(decoded))
-			v.SetBytes(decoded)
+			dest.SetBytes(decoded)
 		} else {
-			for i := 0; i < data.Len(); i++ {
-				indexToSet := v.Index(i)
-				dataToRead := data.Index(i)
+			for i := 0; i < l; i++ {
+				indexToSet := dest.Index(i)
+				dataToRead := source.Index(i)
 				//fmt.Printf("Array Data %v\n", dataToRead)
 				a.unmarshalFromValues(dataToRead.Elem(), indexToSet)
 			}
 		}
 	default:
-		if data.CanFloat() {
+		if source.CanFloat() {
 			// Json treats all numerics as floats, so we must handle float
 			// to int conversion
-			if v.CanFloat() {
-				v.SetFloat(data.Float())
-			} else if v.CanInt() {
-				v.SetInt(int64(data.Float()))
-			} else if v.CanUint() {
-				v.SetUint(uint64(data.Float()))
+			if dest.CanFloat() {
+				dest.SetFloat(source.Float())
+			} else if dest.CanInt() {
+				dest.SetInt(int64(source.Float()))
+			} else if dest.CanUint() {
+				dest.SetUint(uint64(source.Float()))
 			}
-		} else if data.Kind() == reflect.String {
+		} else if source.Kind() == reflect.String {
 			// the asset.Path type is a string, but we can't just do
 			// v.Set, instead we need to use SetString.  Other types
 			// that are aliased like this might also break
-			v.SetString(data.String())
-		} else if data.Kind() == reflect.Bool {
-			v.SetBool(data.Bool())
+			dest.SetString(source.String())
+		} else if source.Kind() == reflect.Bool {
+			dest.SetBool(source.Bool())
 		} else {
-			v.Set(data)
+			dest.Set(source)
 		}
 	}
 

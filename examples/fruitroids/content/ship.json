@@ -1,0 +1,15 @@
+{
+  "Type": "flatland/examples/fruitroids/src/fruitroids.Ship",
+  "Inner": {
+    "ActorBase": {
+      "Transform": {
+        "Location": {
+          "X": 38,
+          "Y": 15.199999809265137,
+          "Z": 0
+        },
+        "Rotation": 0
+      }
+    }
+  }
+}

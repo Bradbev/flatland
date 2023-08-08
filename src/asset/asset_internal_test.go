@@ -10,6 +10,7 @@ import (
 
 type testLeaf struct{ Leaf string }
 type testNode struct {
+	AssetType    Asset
 	Name         string
 	Num          int32
 	Flt          float32
@@ -19,6 +20,7 @@ type testNode struct {
 	Array        [2]int
 	Inline       testLeaf
 	Ref          *testLeaf
+	SliceOfIface []any
 }
 
 // The primary test here is that the Ref pointer
@@ -28,9 +30,11 @@ func TestBuildJsonToSave(t *testing.T) {
 	leaf := testLeaf{Leaf: "Leaf"}
 
 	node := testNode{
-		Name:   "Node",
-		Inline: testLeaf{Leaf: "Inline"},
-		Ref:    &leaf,
+		Name:         "Node",
+		Inline:       testLeaf{Leaf: "Inline"},
+		Ref:          &leaf,
+		AssetType:    &leaf,
+		SliceOfIface: []any{&leaf},
 	}
 
 	a := assetManagerImpl{
@@ -48,6 +52,10 @@ func TestBuildJsonToSave(t *testing.T) {
 0,
 0
 ],
+"AssetType": {
+"Type": "flatland/src/asset.testLeaf",
+"Path": "fullPath.json"
+},
 "Flt": 0,
 "Inline": {
 "Leaf": "Inline"
@@ -59,7 +67,13 @@ func TestBuildJsonToSave(t *testing.T) {
 "Type": "flatland/src/asset.testLeaf",
 "Path": "fullPath.json"
 },
-"Slice": null,
+"Slice": [],
+"SliceOfIface": [
+{
+"Type": "flatland/src/asset.testLeaf",
+"Path": "fullPath.json"
+}
+],
 "Small": 0
 }`
 
@@ -81,6 +95,10 @@ func TestUnmashallFromAny(t *testing.T) {
 		"Array":[4,5],
 		"Inline": {"Leaf":"InlineLeaf"},
 		"Ref": {
+			"Type": "flatland/src/asset.testLeaf",
+			"Path": "fullPath.json"
+		},
+		"AssetType": {
 			"Type": "flatland/src/asset.testLeaf",
 			"Path": "fullPath.json"
 		}
@@ -116,14 +134,15 @@ func TestUnmashallFromAny(t *testing.T) {
 	assert.Equal(t, &leaf, node.Ref, "Expected node.Ref to equal leaf")
 
 	expected := testNode{
-		Name:   "Node",
-		Num:    34,
-		Small:  45,
-		Flt:    1.234,
-		Slice:  []int{1, 2, 3},
-		Array:  [2]int{4, 5},
-		Inline: testLeaf{Leaf: "InlineLeaf"},
-		Ref:    &testLeaf{Leaf: "RefLeaf"}, // NOTE, Equal tests the values, not the pointer addresses
+		Name:      "Node",
+		Num:       34,
+		Small:     45,
+		Flt:       1.234,
+		Slice:     []int{1, 2, 3},
+		Array:     [2]int{4, 5},
+		Inline:    testLeaf{Leaf: "InlineLeaf"},
+		Ref:       &testLeaf{Leaf: "RefLeaf"}, // NOTE, Equal tests the values, not the pointer addresses
+		AssetType: &testLeaf{Leaf: "RefLeaf"}, // NOTE, Equal tests the values, not the pointer addresses
 	}
 	assert.Equal(t, expected, node)
 }

@@ -32,6 +32,9 @@ func main() {
 	flat.RegisterAllFlatTypes()
 	editors.RegisterAllFlatEditors(gg.ed)
 
+	a, err := asset.Load("apple-98.json")
+	fmt.Println(err)
+	defaultTestObject.AssetType = a
 	asset.Save("testobj.json", &defaultTestObject)
 	gg.ed.EditAsset("testobj.json")
 
@@ -43,16 +46,17 @@ type nestedIndirect struct {
 }
 
 type editTest struct {
-	Flt    float32
-	Slice  []int
-	Array  [3]float32
-	SSlice []string
-	ASlice []nestedIndirect
-	Flt64  float64
-	Bool   bool
-	String string
-	Int    int
-	hidden float32
+	AssetType   asset.Asset // support setting Assets
+	Flt         float32
+	Slice       []int
+	Array       [3]float32
+	StringSlice []string
+	StructSlice []nestedIndirect
+	Flt64       float64
+	Bool        bool
+	String      string
+	Int         int
+	hidden      float32
 
 	// Path is filtered using the tag "filter" to files containing the text "json"
 	Path asset.Path `flat:"Path (json filter)" filter:"json"`
@@ -62,8 +66,8 @@ type editTest struct {
 		NestedFloat  float32
 		NestedFloat2 float32
 	} `flat:"Override field name from Nested Immediate"`
+
 	NestedIndirectField        nestedIndirect
-	LastOne                    bool
 	SupportNestedCustomEditors flat.Image
 }
 

@@ -21,6 +21,15 @@
 			"cwd": "${workspaceRoot}/examples/fruitroids",
 			"program": "examples/fruitroids/cmd/editor/editor.go",
 			"args": []
+		},
+		{
+			"name": "Fruitroids",
+			"type": "go",
+			"request": "launch",
+			"mode": "debug",
+			"cwd": "${workspaceRoot}/examples/fruitroids",
+			"program": "examples/fruitroids/cmd/fruitroids/main.go",
+			"args": []
 		}
 	]
 }

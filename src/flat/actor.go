@@ -4,6 +4,7 @@ import (
 	"math"
 
 	"github.com/deeean/go-vector/vector2"
+	"github.com/deeean/go-vector/vector3"
 	"github.com/hajimehoshi/ebiten/v2"
 )
 
@@ -12,7 +13,6 @@ type Component interface {
 }
 
 type Actor interface {
-	isActor()
 }
 
 type Tickable interface {
@@ -32,7 +32,7 @@ func (c *ComponentBase) setOwner(owner *ActorBase) {
 }
 
 type Transform2D struct {
-	Location vector2.Vector2
+	Location vector3.Vector3
 	Rotation float64
 }
 

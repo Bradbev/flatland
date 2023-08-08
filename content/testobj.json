@@ -1,17 +1,19 @@
 {
   "Type": "main.editTest",
   "Inner": {
-    "ASlice": null,
     "Array": [
       0,
       0,
       0
     ],
-    "Bool": false,
+    "AssetType": {
+      "Type": "flatland/src/flat.Image",
+      "Path": "test1/banana.json"
+    },
+    "Bool": true,
     "Flt": 0,
     "Flt64": 0,
     "Int": 0,
-    "LastOne": false,
     "NestedImmediate": {
       "NestedFloat": 0,
       "NestedFloat2": 0
@@ -20,7 +22,6 @@
       "NestedStr": ""
     },
     "Path": "",
-    "SSlice": null,
     "Slice": [
       7,
       4,
@@ -28,6 +29,12 @@
       6
     ],
     "String": "",
+    "StringSlice": [],
+    "StructSlice": [
+      {
+        "NestedStr": "asf"
+      }
+    ],
     "SupportNestedCustomEditors": {
       "Path": ""
     }

@@ -2,6 +2,7 @@ package main
 
 import (
 	"flatland/examples/fruitroids/src/fruitroids"
+	"flatland/src/asset"
 	"flatland/src/editor"
 	"flatland/src/flat"
 	"flatland/src/flat/editors"
@@ -25,7 +26,13 @@ func main() {
 
 	flat.RegisterAllFlatTypes()
 	editors.RegisterAllFlatEditors(gg.ed)
+	fruitroids.RegisterFruitroidTypes()
+
 	game := &fruitroids.Fruitroids{}
+	game.World = flat.NewWorld()
+	ship, err := asset.Load("ship.json")
+	fmt.Println(err)
+	game.World.AddActor(ship)
 	gg.ed.StartGame(game)
 
 	ebiten.RunGame(gg)

@@ -147,6 +147,7 @@ func (e *typeEditor) EditValue(context *TypeEditContext, value reflect.Value) {
 	}
 	// Get at the value being pointed to
 	value = value.Elem()
+	// see if there is a custom editor for this type in particular
 	edFn := e.typeEditFuncs[fullName]
 	if edFn == nil {
 		switch value.Kind() {
@@ -156,11 +157,13 @@ func (e *typeEditor) EditValue(context *TypeEditContext, value reflect.Value) {
 			fallthrough
 		case reflect.Slice:
 			edFn = sliceEd
+		case reflect.Interface:
+			edFn = interfaceEd
 		}
 	}
 
 	if edFn == nil {
-		logger.Printf("No editor for %s (Kind: %s)", fullName, value.Kind().String())
+		unhandledEd(context, value)
 		return
 	}
 	if !value.CanSet() {
@@ -179,6 +182,52 @@ func (e *typeEditor) addPrimitiveTypes() {
 }
 
 // primitive type handler funcs below here
+func unhandledEd(context *TypeEditContext, value reflect.Value) error {
+	edgui.Text("!!Unhandled type")
+	edgui.Text("  - %s", value.Kind().String())
+	_, fullName := asset.TypeName(value.Type())
+	edgui.Text("  - %s", fullName)
+	return nil
+}
+
+type interfaceEdContext struct {
+	auto      *edgui.AutoComplete
+	input     string
+	lastInput string
+}
+
+func interfaceEd(context *TypeEditContext, value reflect.Value) error {
+	// onActivated can be replaced in the future with something that is
+	// much smarter about filtering the asset types
+	onActivated := func() []string {
+		var items []string
+		asset.WalkFiles(func(path string, d fs.DirEntry, err error) error {
+			// do not include directories
+			if d != nil && d.IsDir() {
+				return nil
+			}
+			if strings.Contains(path, ".json") {
+				items = append(items, path)
+			}
+			return nil
+		})
+		return items
+	}
+
+	c, firstTime := GetContext[interfaceEdContext](context, value)
+	if firstTime {
+		c.auto = &edgui.AutoComplete{}
+	}
+	c.auto.InputText("", &c.input, onActivated)
+	if c.input != c.lastInput { // need a better check here for "input entered"
+		c.lastInput = c.input
+		asset, err := asset.Load(asset.Path(c.input))
+		if err == nil && asset != nil {
+			value.Set(reflect.ValueOf(asset))
+		}
+	}
+	return nil
+}
 
 func structEd(context *TypeEditContext, value reflect.Value) error {
 	t := value.Type()

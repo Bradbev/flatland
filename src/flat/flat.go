@@ -3,14 +3,21 @@ package flat
 import "github.com/hajimehoshi/ebiten/v2"
 
 type World struct {
-	tickables []Tickable
-	drawables []Drawable
+	tickables        []Tickable
+	drawables        []Drawable
+	PersistentActors []Actor
 }
 
 func NewWorld() *World {
 	return &World{
 		tickables: []Tickable{},
 		drawables: []Drawable{},
+	}
+}
+
+func (w *World) PostLoad() {
+	for _, a := range w.PersistentActors {
+		w.AddActor(a)
 	}
 }
 

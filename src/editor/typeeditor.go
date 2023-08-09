@@ -217,6 +217,12 @@ func interfaceEd(context *TypeEditContext, value reflect.Value) error {
 	c, firstTime := GetContext[interfaceEdContext](context, value)
 	if firstTime {
 		c.auto = &edgui.AutoComplete{}
+		if !value.IsNil() {
+			path, err := asset.LoadPathForAsset(value.Interface())
+			if err == nil {
+				c.input = string(path)
+			}
+		}
 	}
 	c.auto.InputText("", &c.input, onActivated)
 	if c.input != c.lastInput { // need a better check here for "input entered"

@@ -29,10 +29,13 @@ func main() {
 	fruitroids.RegisterFruitroidTypes()
 
 	game := &fruitroids.Fruitroids{}
-	game.World = flat.NewWorld()
-	ship, err := asset.Load("ship.json")
+	world, err := asset.Load("world.json")
 	fmt.Println(err)
-	game.World.AddActor(ship)
+	game.World = world.(*flat.World)
+	//game.World = flat.NewWorld()
+	//ship, err := asset.Load("ship.json")
+	//fmt.Println(err)
+	//game.World.AddActor(ship)
 	gg.ed.StartGame(game)
 
 	ebiten.RunGame(gg)

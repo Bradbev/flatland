@@ -3,6 +3,7 @@ package editor
 import (
 	"errors"
 	"flatland/src/asset"
+	"flatland/src/editor/edgui"
 	"fmt"
 	"io/fs"
 	"os"
@@ -26,6 +27,8 @@ type ImguiEditor struct {
 
 	fsysRead  fs.FS
 	fsysWrite asset.WriteableFileSystem
+
+	menu menuManager
 
 	drawables []Drawable
 
@@ -71,6 +74,8 @@ func New(path string, manager *renderer.Manager) *ImguiEditor {
 	contentWindow := newContentWindow(ed)
 	ed.AddDrawable(contentWindow)
 
+	ed.createMenu(&ed.menu)
+
 	return ed
 }
 
@@ -79,6 +84,8 @@ func (e *ImguiEditor) AddType(typeToAdd any, edit TypeEditorFn) {
 }
 
 func (e *ImguiEditor) Update(deltaseconds float32) error {
+	e.menu.Draw()
+
 	// iterate Drawables, then remove any that closed
 	toRemove := map[Drawable]bool{}
 	for _, d := range e.drawables {
@@ -207,6 +214,22 @@ func (e *ImguiEditor) buildFileCache() *fswalk {
 		return nil
 	})
 	return stack[0]
+}
+
+func (ed *ImguiEditor) AddMenu(menu edgui.Menu) {
+	ed.menu.AddMenu(menu)
+}
+
+func (ed *ImguiEditor) createMenu(m *menuManager) {
+	i := func(name string, action func()) *edgui.MenuItem {
+		return &edgui.MenuItem{Text: name, Action: func(*edgui.MenuItem) { action() }}
+	}
+	m.AddMenu(edgui.Menu{
+		Name: "File",
+		Items: []*edgui.MenuItem{
+			i("Quit", func() { panic("Quit") }),
+		},
+	})
 }
 
 type editorWriteFS struct {

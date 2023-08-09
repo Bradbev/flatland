@@ -51,5 +51,6 @@ func (s *Ship) Tick(deltaseconds float64) {
 
 func (s *Ship) Draw(screen *ebiten.Image) {
 	s.ActorBase.Draw(screen)
-	ebitenutil.DebugPrintAt(screen, fmt.Sprintf("Ship at %v has ticked %v", s.Transform.Location, s.ticks), 11, 50)
+	x, y := s.Transform.Location.X, s.Transform.Location.Y
+	ebitenutil.DebugPrintAt(screen, fmt.Sprintf("Ship at %v has ticked %v", s.Transform.Location, s.ticks), int(x), int(y))
 }

@@ -8,9 +8,9 @@
     ],
     "AssetType": {
       "Type": "flatland/src/flat.Image",
-      "Path": "test1/banana.json"
+      "Path": "apple-98.json"
     },
-    "Bool": true,
+    "Bool": false,
     "Flt": 0,
     "Flt64": 0,
     "Int": 0,
@@ -30,11 +30,7 @@
     ],
     "String": "",
     "StringSlice": [],
-    "StructSlice": [
-      {
-        "NestedStr": "asf"
-      }
-    ],
+    "StructSlice": [],
     "SupportNestedCustomEditors": {
       "Path": ""
     }

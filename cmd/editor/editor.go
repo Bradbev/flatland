@@ -3,6 +3,7 @@ package main
 import (
 	"flatland/src/asset"
 	"flatland/src/editor"
+	"flatland/src/editor/edgui"
 	"flatland/src/flat"
 	"flatland/src/flat/editors"
 	"fmt"
@@ -11,10 +12,11 @@ import (
 	"github.com/hajimehoshi/ebiten/v2"
 	"github.com/hajimehoshi/ebiten/v2/ebitenutil"
 	"github.com/hajimehoshi/ebiten/v2/inpututil"
-	"github.com/inkyblackness/imgui-go/v4"
 )
 
-// Example with the main Demo window and ClipMask
+// This file should eventually slim down to almost nothing,
+// just some code to register the game specific assets and
+// the new game creation function
 
 func main() {
 	mgr := renderer.New(nil)
@@ -32,11 +34,26 @@ func main() {
 	flat.RegisterAllFlatTypes()
 	editors.RegisterAllFlatEditors(gg.ed)
 
+	// load an asset to be edited by the test editor
 	a, err := asset.Load("apple-98.json")
 	fmt.Println(err)
 	defaultTestObject.AssetType = a
 	asset.Save("testobj.json", &defaultTestObject)
 	gg.ed.EditAsset("testobj.json")
+
+	menu := edgui.Menu{
+		Name: "Custom Item",
+		Items: []*edgui.MenuItem{
+			{
+				Text: "Show Imgui Demo",
+				Action: func(self *edgui.MenuItem) {
+					gg.showDemoWindow = !gg.showDemoWindow
+					self.Selected = gg.showDemoWindow
+				},
+			},
+		},
+	}
+	gg.ed.AddMenu(menu)
 
 	ebiten.RunGame(gg)
 }
@@ -45,6 +62,8 @@ type nestedIndirect struct {
 	NestedStr string
 }
 
+// editTest demonstrates all the ways that the editor can
+// edit types.
 type editTest struct {
 	AssetType   asset.Asset // support setting Assets
 	Flt         float32
@@ -75,6 +94,8 @@ var defaultTestObject = editTest{
 	Slice: []int{7, 4, 5, 6},
 }
 
+// eventually this struct will vanish and the whole loop
+// will live in the editor
 type G struct {
 	mgr *renderer.Manager
 	// demo members:
@@ -87,11 +108,9 @@ type G struct {
 }
 
 func (g *G) Draw(screen *ebiten.Image) {
-	ebitenutil.DebugPrintAt(screen, fmt.Sprintf("TPS: %.3f\nFPS: %.2f\n", ebiten.ActualTPS(), ebiten.ActualFPS()), 11, 2)
+	ebitenutil.DebugPrintAt(screen, fmt.Sprintf("TPS: %.3f\nFPS: %.2f\n", ebiten.ActualTPS(), ebiten.ActualFPS()), 11, 20)
 	g.mgr.Draw(screen)
 }
-
-var autoS string
 
 func (g *G) Update() error {
 	g.mgr.Update(1.0 / 60.0)
@@ -101,32 +120,9 @@ func (g *G) Update() error {
 	g.mgr.BeginFrame()
 	{
 		g.ed.Update(1.0 / float32(ebiten.ActualTPS()))
-		g.debugWindow()
-		func() {
-			defer func() {
-				if err := recover(); err != nil {
-					fmt.Println(err)
-					fmt.Println("Recovered")
-				}
-			}()
-
-		}()
 	}
 	g.mgr.EndFrame()
 	return nil
-}
-
-func (g *G) debugWindow() {
-	defer imgui.End()
-	if !imgui.Begin("Debug") {
-		return
-	}
-	imgui.Checkbox("Retina", &g.retina)              // Edit bools storing our window open/close state
-	imgui.Checkbox("Demo Window", &g.showDemoWindow) // Edit bools storing our window open/close state
-
-	if g.showDemoWindow {
-		imgui.ShowDemoWindow(&g.showDemoWindow)
-	}
 }
 
 func (g *G) Layout(outsideWidth, outsideHeight int) (int, int) {

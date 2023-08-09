@@ -17,6 +17,8 @@ type f64 = float64
 type f32 = float32
 
 func RegisterAllFlatEditors(edit *editor.ImguiEditor) {
+	// EXAMPLE: You can add your own custom editors for any type you choose,
+	// including primitive types.
 	edit.AddType(new(flat.Image), imageEd)
 }
 

@@ -102,6 +102,14 @@ func Save(path Path, toSave Asset) error {
 	return assetManager.Save(path, toSave)
 }
 
+func LoadPathForAsset(a Asset) (Path, error) {
+	path, ok := assetManager.AssetToLoadPath[a]
+	if !ok {
+		return path, fmt.Errorf("Asset not loaded")
+	}
+	return path, nil
+}
+
 // WalkFiles is like fs.WalkDir, but it will walk all the readable file systems
 // registered with asset.RegisterFileSystem
 func WalkFiles(fn fs.WalkDirFunc) error {

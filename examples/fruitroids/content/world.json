@@ -5,6 +5,10 @@
       {
         "Type": "flatland/examples/fruitroids/src/fruitroids.Ship",
         "Path": "ship.json"
+      },
+      {
+        "Type": "flatland/examples/fruitroids/src/fruitroids.Ship",
+        "Path": "ship2.json"
       }
     ]
   }

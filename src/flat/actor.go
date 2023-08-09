@@ -9,10 +9,12 @@ import (
 )
 
 type Component interface {
-	setOwner(owner *ActorBase)
+	SetOwner(owner Actor)
+	Owner() Actor
 }
 
 type Actor interface {
+	GetTransform() Transform2D
 }
 
 type Tickable interface {
@@ -24,36 +26,45 @@ type Drawable interface {
 }
 
 type ComponentBase struct {
-	Owner *ActorBase
+	owner Actor
 }
 
-func (c *ComponentBase) setOwner(owner *ActorBase) {
-	c.Owner = owner
+func (c *ComponentBase) SetOwner(owner Actor) {
+	c.owner = owner
+}
+func (c *ComponentBase) Owner() Actor {
+	return c.owner
 }
 
 type Transform2D struct {
 	Location vector3.Vector3
 	Rotation float64
+	Scale    float64
 }
 
 type ActorBase struct {
 	Transform          Transform2D
+	Components         []Component
 	tickableComponents []Tickable
 	drawableComponents []Drawable
-	components         []Component
 }
 
-func (a *ActorBase) isActor() {}
+// "static asset" that ActorBase implements Actor
+var _ = Actor((*ActorBase)(nil))
 
 func (a *ActorBase) AddComponent(component Component) {
-	component.setOwner(a)
-	a.components = append(a.components, component)
+	component.SetOwner(a)
+	a.Components = append(a.Components, component)
 	if tickable, ok := component.(Tickable); ok {
 		a.tickableComponents = append(a.tickableComponents, tickable)
 	}
 	if drawable, ok := component.(Drawable); ok {
 		a.drawableComponents = append(a.drawableComponents, drawable)
 	}
+}
+
+func (a *ActorBase) GetTransform() Transform2D {
+	return a.Transform
 }
 
 func (a *ActorBase) Tick(deltaseconds float64) {
@@ -89,6 +100,8 @@ type ImageComponent struct {
 	geoM       ebiten.GeoM
 }
 
+var _ = Component((*ImageComponent)(nil))
+
 func (a *ImageComponent) SetImage(image *ebiten.Image) {
 	a.image = image
 	bounds := image.Bounds()
@@ -104,8 +117,8 @@ func (a *ImageComponent) SetImage(image *ebiten.Image) {
 func (a *ImageComponent) Draw(screen *ebiten.Image) {
 	op := &ebiten.DrawImageOptions{}
 	op.GeoM = a.geoM
-	op.GeoM.Scale(0.25, 0.25)
-	t := &a.Owner.Transform
+	t := a.Owner().GetTransform()
+	op.GeoM.Scale(t.Scale, t.Scale)
 	op.GeoM.Rotate(t.Rotation * math.Pi / 180.0)
 	op.GeoM.Translate(t.Location.X, t.Location.Y)
 	screen.DrawImage(a.image, op)

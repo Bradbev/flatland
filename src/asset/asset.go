@@ -49,6 +49,7 @@ type AssetDescriptor struct {
 	Create   FactoryFunc
 }
 
+// Asset can be any type.
 type Asset interface{}
 type PostLoadingAsset interface {
 	PostLoad()
@@ -80,14 +81,12 @@ func RegisterAssetFactory(zeroAsset any, factoryFunction FactoryFunc) {
 	assetManager.RegisterAssetFactory(zeroAsset, factoryFunction)
 }
 
-func RegisterAsset(zeroAsset any) bool {
-	zeroType := reflect.TypeOf(zeroAsset)
-
+func RegisterAsset(zeroAsset any) {
 	assetManager.RegisterAssetFactory(zeroAsset, func() (Asset, error) {
+		zeroType := reflect.TypeOf(zeroAsset)
 		zero := reflect.New(zeroType)
 		return zero.Interface().(Asset), nil
 	})
-	return true
 }
 
 func ReadFile(assetPath Path) ([]byte, error) {
@@ -209,6 +208,10 @@ func (a *assetManagerImpl) WalkFiles(fn fs.WalkDirFunc) error {
 }
 
 func (a *assetManagerImpl) RegisterAssetFactory(zeroAsset any, factoryFunction FactoryFunc) {
+	zeroType := reflect.TypeOf(zeroAsset)
+	if zeroType.Kind() != reflect.Struct {
+		log.Panicf("RegisterAssetFactory must be called with a concrete type that is a struct.  This is a programming error - %v", zeroAsset)
+	}
 	name, typeName := ObjectTypeName(zeroAsset)
 	println("Registered asset ", typeName)
 	descriptor := &AssetDescriptor{
@@ -295,12 +298,20 @@ func (a *assetManagerImpl) buildJsonToSave(obj any) any {
 		return m
 	case reflect.Slice:
 		v := reflect.ValueOf(obj)
-		s := make([]any, v.Len())
-		for i := 0; i < v.Len(); i++ {
-			index := v.Index(i)
-			s[i] = a.buildJsonToSave(index.Interface())
+		l := v.Len()
+		if l > 0 && v.Index(0).Kind() == reflect.Uint8 {
+			// byte slices are uuencoded into a string (because the json package does it that way)
+			bytes := v.Bytes()
+			encoded := base64.StdEncoding.EncodeToString(bytes)
+			return encoded
+		} else {
+			s := make([]any, v.Len())
+			for i := 0; i < v.Len(); i++ {
+				index := v.Index(i)
+				s[i] = a.buildJsonToSave(index.Interface())
+			}
+			return s
 		}
-		return s
 	default:
 		return obj
 	}
@@ -362,6 +373,9 @@ func (a *assetManagerImpl) unmarshalFromAny(data any, v any) error {
 }
 
 func safeLen(value reflect.Value) int {
+	if value.Kind() == reflect.String {
+		return value.Len()
+	}
 	if !value.IsValid() || value.IsZero() || value.IsNil() {
 		return 0
 	}
@@ -371,8 +385,8 @@ func safeLen(value reflect.Value) int {
 //var assetType = reflect.ValueOf(new(Asset)).Elem().Type()
 
 func (a *assetManagerImpl) unmarshalFromValues(source reflect.Value, dest reflect.Value) error {
-	//fmt.Printf("v:%#v \nsettable? %v \nkind %s\n", v, v.CanSet(), v.Kind())
-	//fmt.Printf("data:%#v \nkind %s\n-----\n", data, data.Kind())
+	fmt.Printf("source:%#v \nsettable? %v \nkind %s\n", source, source.CanSet(), source.Kind())
+	fmt.Printf("dest:%#v \nkind %s\n-----\n", dest, dest.Kind())
 	t := dest.Type()
 	switch dest.Kind() {
 	case reflect.Interface:

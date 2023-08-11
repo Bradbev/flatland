@@ -13,14 +13,15 @@ information hiding/abstraction against reflection?
  - Convention might be easiest, ie, for anything you want to save, but be treated as "private", have a naming convention.
 
 # Next Goal
-- Figure out reload on asset changed
-- PIE
 - Create a tiny game that does not include the editor package, but does load the created asset
+- Filter asset selection by type
 - Clean everything up and decide on how the lines of separation need to be drawn
 - Save/restore editor state
 - Parse own code to get doc strings on types?
 
 # Done
+- PIE
+- Figure out reload on asset changed
 - Auto load recursive asset paths
 - Path selection dialog
 - Create a custom asset editor

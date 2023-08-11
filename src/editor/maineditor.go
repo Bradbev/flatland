@@ -102,8 +102,8 @@ func (e *ImguiEditor) Update(deltaseconds float32) error {
 	return nil
 }
 
-func (e *ImguiEditor) StartGame(game ebiten.Game) {
-	e.pie.StartGame(game)
+func (e *ImguiEditor) StartGameCallback(startGame func() ebiten.Game) {
+	e.pie.StartGameCallback(startGame)
 }
 
 func (e *ImguiEditor) AddDrawable(d Drawable) {
@@ -132,11 +132,8 @@ func (e *ImguiEditor) EditAsset(path string) {
 		fmt.Println(err)
 		return
 	}
-	aew := &assetEditWindow{
-		path:    path,
-		target:  loaded,
-		context: NewTypeEditContext(e),
-	}
+
+	aew := newAssetEditWindow(path, loaded, NewTypeEditContext(e))
 
 	e.AddDrawable(aew)
 }
@@ -228,6 +225,12 @@ func (ed *ImguiEditor) createMenu(m *menuManager) {
 		Name: "File",
 		Items: []*edgui.MenuItem{
 			i("Quit", func() { panic("Quit") }),
+		},
+	})
+	m.AddMenu(edgui.Menu{
+		Name: "Game",
+		Items: []*edgui.MenuItem{
+			i("Start PIE", func() { ed.pie.StartGame() }),
 		},
 	})
 }

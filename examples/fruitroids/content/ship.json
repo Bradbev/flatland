@@ -2,21 +2,20 @@
   "Type": "flatland/examples/fruitroids/src/fruitroids.Ship",
   "Inner": {
     "ActorBase": {
-      "Components": [
-        {
-          "Type": "flatland/src/flat.ImageComponent",
-          "Path": "imagecomp.json"
-        }
-      ],
+      "Components": [],
       "Transform": {
         "Location": {
-          "X": 32,
-          "Y": 119.19999694824219,
+          "X": 89,
+          "Y": 150.1999969482422,
           "Z": 0
         },
-        "Rotation": 0,
-        "Scale": 0
+        "Rotation": -2,
+        "Scale": 0.07999999821186066
       }
+    },
+    "Image": {
+      "Type": "flatland/src/flat.Image",
+      "Path": "apple.json"
     }
   }
 }

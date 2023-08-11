@@ -28,15 +28,18 @@ func main() {
 	editors.RegisterAllFlatEditors(gg.ed)
 	fruitroids.RegisterFruitroidTypes()
 
-	game := &fruitroids.Fruitroids{}
-	world, err := asset.Load("world.json")
-	fmt.Println(err)
-	game.World = world.(*flat.World)
 	//game.World = flat.NewWorld()
 	//ship, err := asset.Load("ship.json")
 	//fmt.Println(err)
 	//game.World.AddActor(ship)
-	gg.ed.StartGame(game)
+	gg.ed.StartGameCallback(func() ebiten.Game {
+		world, err := asset.Load("world.json")
+		fmt.Println(err)
+		game := &fruitroids.Fruitroids{}
+		game.World = world.(*flat.World)
+		game.World.BeginPlay()
+		return game
+	})
 
 	ebiten.RunGame(gg)
 }

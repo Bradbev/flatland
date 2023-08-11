@@ -1,9 +1,6 @@
 package flat
 
 import (
-	"math"
-
-	"github.com/deeean/go-vector/vector2"
 	"github.com/deeean/go-vector/vector3"
 	"github.com/hajimehoshi/ebiten/v2"
 )
@@ -23,6 +20,10 @@ type Tickable interface {
 
 type Drawable interface {
 	Draw(screen *ebiten.Image)
+}
+
+type Playable interface {
+	BeginPlay()
 }
 
 type ComponentBase struct {
@@ -49,17 +50,24 @@ type ActorBase struct {
 	drawableComponents []Drawable
 }
 
-// "static asset" that ActorBase implements Actor
+// "static assert" that ActorBase implements Actor
 var _ = Actor((*ActorBase)(nil))
 
-func (a *ActorBase) AddComponent(component Component) {
-	component.SetOwner(a)
-	a.Components = append(a.Components, component)
-	if tickable, ok := component.(Tickable); ok {
-		a.tickableComponents = append(a.tickableComponents, tickable)
-	}
-	if drawable, ok := component.(Drawable); ok {
-		a.drawableComponents = append(a.drawableComponents, drawable)
+func (a *ActorBase) reset() {
+	a.tickableComponents = nil
+	a.drawableComponents = nil
+}
+
+func (a *ActorBase) BeginPlay() {
+	a.reset()
+	for _, component := range a.Components {
+		component.SetOwner(a)
+		if tickable, ok := component.(Tickable); ok {
+			a.tickableComponents = append(a.tickableComponents, tickable)
+		}
+		if drawable, ok := component.(Drawable); ok {
+			a.drawableComponents = append(a.drawableComponents, drawable)
+		}
 	}
 }
 
@@ -91,35 +99,3 @@ func FindComponent[T Component](owner Actor) T {
 	return *new(T) // noooo
 }
 */
-
-type ImageComponent struct {
-	ComponentBase
-	image      *ebiten.Image
-	dimensions vector2.Vector2
-	op         ebiten.DrawImageOptions
-	geoM       ebiten.GeoM
-}
-
-var _ = Component((*ImageComponent)(nil))
-
-func (a *ImageComponent) SetImage(image *ebiten.Image) {
-	a.image = image
-	bounds := image.Bounds()
-	x, y := bounds.Dx(), bounds.Dy()
-	a.dimensions.Set(float64(x), float64(y))
-	a.op = ebiten.DrawImageOptions{
-		Filter: ebiten.FilterLinear,
-	}
-	a.geoM = ebiten.GeoM{}
-	a.geoM.Translate(-a.dimensions.X/2.0, -a.dimensions.Y/2.0)
-}
-
-func (a *ImageComponent) Draw(screen *ebiten.Image) {
-	op := &ebiten.DrawImageOptions{}
-	op.GeoM = a.geoM
-	t := a.Owner().GetTransform()
-	op.GeoM.Scale(t.Scale, t.Scale)
-	op.GeoM.Rotate(t.Rotation * math.Pi / 180.0)
-	op.GeoM.Translate(t.Location.X, t.Location.Y)
-	screen.DrawImage(a.image, op)
-}

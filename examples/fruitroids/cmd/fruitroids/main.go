@@ -24,6 +24,7 @@ func main() {
 	world, err := asset.Load("world.json")
 	fmt.Println(err)
 	gg.World = world.(*flat.World)
+	gg.World.BeginPlay()
 	//gg.World = flat.NewWorld()
 	//ship, err := asset.Load("ship.json")
 	//fmt.Println(err)

@@ -3,30 +3,38 @@ package flat
 import "github.com/hajimehoshi/ebiten/v2"
 
 type World struct {
+	ActorBase
 	tickables        []Tickable
 	drawables        []Drawable
 	PersistentActors []Actor
 }
 
 func NewWorld() *World {
-	return &World{
-		tickables: []Tickable{},
-		drawables: []Drawable{},
-	}
+	w := &World{}
+	w.reset()
+	return w
+}
+
+func (w *World) reset() {
+	w.tickables = nil
+	w.drawables = nil
 }
 
 func (w *World) PostLoad() {
-	for _, a := range w.PersistentActors {
-		w.AddActor(a)
-	}
 }
 
-func (w *World) AddActor(actor Actor) {
-	if tickable, ok := actor.(Tickable); ok {
-		w.tickables = append(w.tickables, tickable)
-	}
-	if drawable, ok := actor.(Drawable); ok {
-		w.drawables = append(w.drawables, drawable)
+func (w *World) BeginPlay() {
+	w.reset()
+	for _, actor := range w.PersistentActors {
+		if tickable, ok := actor.(Tickable); ok {
+			w.tickables = append(w.tickables, tickable)
+		}
+		if drawable, ok := actor.(Drawable); ok {
+			w.drawables = append(w.drawables, drawable)
+		}
+		if playable, ok := actor.(Playable); ok {
+			playable.BeginPlay()
+		}
 	}
 }
 

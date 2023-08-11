@@ -1,0 +1,10 @@
+{
+  "Type": "flatland/src/flat.ImageComponent",
+  "Inner": {
+    "ComponentBase": {},
+    "Image": {
+      "Type": "flatland/src/flat.Image",
+      "Path": "banana.json"
+    }
+  }
+}

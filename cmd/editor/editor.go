@@ -12,6 +12,7 @@ import (
 	"github.com/hajimehoshi/ebiten/v2"
 	"github.com/hajimehoshi/ebiten/v2/ebitenutil"
 	"github.com/hajimehoshi/ebiten/v2/inpututil"
+	"github.com/inkyblackness/imgui-go/v4"
 )
 
 // This file should eventually slim down to almost nothing,
@@ -120,6 +121,9 @@ func (g *G) Update() error {
 	g.mgr.BeginFrame()
 	{
 		g.ed.Update(1.0 / float32(ebiten.ActualTPS()))
+		if g.showDemoWindow {
+			imgui.ShowDemoWindow(&g.showDemoWindow)
+		}
 	}
 	g.mgr.EndFrame()
 	return nil

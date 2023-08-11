@@ -6,18 +6,26 @@ import (
 
 	"github.com/hajimehoshi/ebiten/v2"
 	"github.com/inkyblackness/imgui-go/v4"
+	"golang.org/x/exp/slices"
 )
 
 type pieManager struct {
-	ed       *ImguiEditor
-	pieGames []ebiten.Game
+	ed        *ImguiEditor
+	pieGames  []ebiten.Game
+	startGame func() ebiten.Game
 }
 
-func (p *pieManager) StartGame(game ebiten.Game) {
+func (p *pieManager) StartGameCallback(startGame func() ebiten.Game) {
+	p.startGame = startGame
+}
+
+func (p *pieManager) StartGame() {
+	game := p.startGame()
 	p.pieGames = append(p.pieGames, game)
 }
 
 func (p *pieManager) Update(deltaseconds float32) {
+	closedIndex := -1
 	for i, game := range p.pieGames {
 		open := true
 		if imgui.BeginV(fmt.Sprintf("PIE %d", i), &open, 0) {
@@ -30,5 +38,11 @@ func (p *pieManager) Update(deltaseconds float32) {
 			imgui.Image(id, winSize)
 		}
 		imgui.End()
+		if !open {
+			closedIndex = i
+		}
+	}
+	if closedIndex >= 0 {
+		p.pieGames = slices.Delete(p.pieGames, closedIndex, closedIndex+1)
 	}
 }

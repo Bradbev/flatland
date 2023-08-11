@@ -27,6 +27,8 @@ type TypeEditContext struct {
 	// the stack of struct fields so nested editors
 	// can see what their field description is
 	structFieldStack []*reflect.StructField
+
+	hasChanged bool
 }
 
 func NewTypeEditContext(ed *ImguiEditor) *TypeEditContext {
@@ -40,6 +42,10 @@ func NewTypeEditContext(ed *ImguiEditor) *TypeEditContext {
 // GetContext exists just to help you find editor.GetContext[T](*TypeEditContext, reflect.Value)
 func (c *TypeEditContext) GetContext(key reflect.Value) {
 	panic("")
+}
+
+func (c *TypeEditContext) SetChanged() {
+	c.hasChanged = true
 }
 
 // EditValue allows the custom type editors to edit sub parts
@@ -153,10 +159,14 @@ func (e *typeEditor) EditValue(context *TypeEditContext, value reflect.Value) {
 		switch value.Kind() {
 		case reflect.Struct:
 			edFn = structEd
+
 		case reflect.Array:
 			fallthrough
 		case reflect.Slice:
 			edFn = sliceEd
+
+		case reflect.Pointer:
+			fallthrough
 		case reflect.Interface:
 			edFn = interfaceEd
 		}
@@ -221,6 +231,7 @@ func interfaceEd(context *TypeEditContext, value reflect.Value) error {
 			path, err := asset.LoadPathForAsset(value.Interface())
 			if err == nil {
 				c.input = string(path)
+				c.lastInput = c.input
 			}
 		}
 	}
@@ -230,6 +241,7 @@ func interfaceEd(context *TypeEditContext, value reflect.Value) error {
 		asset, err := asset.Load(asset.Path(c.input))
 		if err == nil && asset != nil {
 			value.Set(reflect.ValueOf(asset))
+			context.SetChanged()
 		}
 	}
 	return nil
@@ -333,11 +345,13 @@ func sliceEd(context *TypeEditContext, value reflect.Value) error {
 					// default init the new item
 					value.Index(sliceLen).Set(reflect.New(value.Index(0).Type()).Elem())
 					sliceLen = value.Len()
+					context.SetChanged()
 				}
 				imgui.SameLine()
 				if imgui.Button("Clear") {
 					value.SetLen(0)
 					sliceLen = 0
+					context.SetChanged()
 				}
 			}
 			toDelete := -1
@@ -360,6 +374,7 @@ func sliceEd(context *TypeEditContext, value reflect.Value) error {
 					value.Index(i).Set(value.Index(i + 1))
 				}
 				value.SetLen(sliceLen - 1)
+				context.SetChanged()
 			}
 		})
 	})
@@ -377,7 +392,9 @@ func withID(value reflect.Value, body func()) {
 func float32Edit(context *TypeEditContext, value reflect.Value) error {
 	withID(value, func() {
 		addr := value.Addr().Interface().(*float32)
-		imgui.DragFloat("", addr)
+		if imgui.DragFloat("", addr) {
+			context.SetChanged()
+		}
 	})
 	return nil
 }
@@ -385,8 +402,10 @@ func float32Edit(context *TypeEditContext, value reflect.Value) error {
 func float64Edit(context *TypeEditContext, value reflect.Value) error {
 	withID(value, func() {
 		f32 := float32(value.Float())
-		imgui.DragFloat("", &f32)
-		value.SetFloat(float64(f32))
+		if imgui.DragFloat("", &f32) {
+			context.SetChanged()
+			value.SetFloat(float64(f32))
+		}
 	})
 	return nil
 }
@@ -394,7 +413,9 @@ func float64Edit(context *TypeEditContext, value reflect.Value) error {
 func boolEdit(context *TypeEditContext, value reflect.Value) error {
 	withID(value, func() {
 		addr := value.Addr().Interface().(*bool)
-		imgui.Checkbox("", addr)
+		if imgui.Checkbox("", addr) {
+			context.SetChanged()
+		}
 	})
 	return nil
 }
@@ -402,7 +423,9 @@ func boolEdit(context *TypeEditContext, value reflect.Value) error {
 func stringEdit(context *TypeEditContext, value reflect.Value) error {
 	withID(value, func() {
 		addr := value.Addr().Interface().(*string)
-		imgui.InputText("", addr)
+		if imgui.InputText("", addr) {
+			context.SetChanged()
+		}
 	})
 	return nil
 }
@@ -410,8 +433,10 @@ func stringEdit(context *TypeEditContext, value reflect.Value) error {
 func intEdit(context *TypeEditContext, value reflect.Value) error {
 	withID(value, func() {
 		i32 := int32(value.Int())
-		imgui.InputInt("", &i32)
-		value.SetInt(int64(i32))
+		if imgui.InputInt("", &i32) {
+			context.SetChanged()
+			value.SetInt(int64(i32))
+		}
 	})
 	return nil
 }
@@ -458,6 +483,8 @@ func pathEd(context *TypeEditContext, value reflect.Value) error {
 	}
 	path := value.Addr().Interface().(*asset.Path)
 	s := (*string)(path)
-	c.auto.InputText("", s, onActivated)
+	if c.auto.InputText("", s, onActivated) {
+		context.SetChanged()
+	}
 	return nil
 }

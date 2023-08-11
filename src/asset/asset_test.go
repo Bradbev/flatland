@@ -3,7 +3,9 @@ package asset_test
 import (
 	"encoding/json"
 	"flatland/src/asset"
+	"fmt"
 	"io/fs"
+	"reflect"
 	"testing"
 
 	"github.com/psanford/memfs"
@@ -296,4 +298,25 @@ func TestAliasedTypes(t *testing.T) {
 	assert.NoError(t, err)
 
 	assert.Equal(t, toSave, loaded)
+}
+
+type reflectStr struct {
+	Foo string
+}
+
+func TestReflectCopy(t *testing.T) {
+	p := fmt.Printf
+	a := &reflectStr{"This is A"}
+	wrappedA := any(a) // interface of (*reflectStr, a)
+
+	typeToMake := reflect.TypeOf(wrappedA).Elem() // type is reflectStr
+	p("typeToMake %v\n", typeToMake)
+
+	b := reflect.New(typeToMake) // returns a *typeToMake
+	b.Elem().Set(reflect.ValueOf(wrappedA).Elem())
+
+	assert.Equal(t, a, b.Interface()) // they're equal!
+
+	a.Foo = "bar"
+	assert.NotEqual(t, a, b.Interface())
 }

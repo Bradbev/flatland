@@ -20,6 +20,11 @@ func RegisterAllFlatEditors(edit *editor.ImguiEditor) {
 	// EXAMPLE: You can add your own custom editors for any type you choose,
 	// including primitive types.
 	edit.AddType(new(flat.Image), imageEd)
+
+	// Editors for interfaces are supported
+	edit.AddType(new(flat.Actor), actorEd)
+	// For the case or ActorBase, it will also match the interface, and we do not want that
+	edit.AddType(new(flat.ActorBase), editor.StructEd)
 }
 
 type imageEdContext struct {

@@ -5,12 +5,19 @@ import (
 	"github.com/hajimehoshi/ebiten/v2"
 )
 
-type Component interface {
-	SetOwner(owner Actor)
-	Owner() Actor
+type Actor interface {
+	Transformer
+	IsActor()
 }
 
-type Actor interface {
+// Component
+type Component interface {
+	Transformer
+	SetOwner(owner any)
+	Owner() any
+}
+
+type Transformer interface {
 	GetTransform() Transform2D
 }
 
@@ -27,20 +34,26 @@ type Playable interface {
 }
 
 type ComponentBase struct {
-	owner Actor
+	Transform Transform2D
+	owner     any
 }
 
-func (c *ComponentBase) SetOwner(owner Actor) {
+func (c *ComponentBase) GetTransform() Transform2D {
+	return c.Transform
+}
+
+func (c *ComponentBase) SetOwner(owner any) {
 	c.owner = owner
 }
-func (c *ComponentBase) Owner() Actor {
+func (c *ComponentBase) Owner() any {
 	return c.owner
 }
 
 type Transform2D struct {
 	Location vector3.Vector3
 	Rotation float64
-	Scale    float64
+	ScaleX   float64
+	ScaleY   float64
 }
 
 type ActorBase struct {
@@ -62,6 +75,9 @@ func (a *ActorBase) BeginPlay() {
 	a.reset()
 	for _, component := range a.Components {
 		component.SetOwner(a)
+		if playable, ok := component.(Playable); ok {
+			playable.BeginPlay()
+		}
 		if tickable, ok := component.(Tickable); ok {
 			a.tickableComponents = append(a.tickableComponents, tickable)
 		}
@@ -70,6 +86,8 @@ func (a *ActorBase) BeginPlay() {
 		}
 	}
 }
+
+func (a *ActorBase) IsActor() {}
 
 func (a *ActorBase) GetTransform() Transform2D {
 	return a.Transform

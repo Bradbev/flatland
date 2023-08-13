@@ -16,6 +16,9 @@ type assetEditWindow struct {
 }
 
 func newAssetEditWindow(path string, target asset.Asset, context *TypeEditContext) *assetEditWindow {
+	if playable, ok := target.(flat.Playable); ok {
+		playable.BeginPlay()
+	}
 	return &assetEditWindow{
 		path:    path,
 		target:  target,

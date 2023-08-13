@@ -11,6 +11,8 @@ import (
 	"strings"
 	"unsafe"
 
+	"golang.org/x/exp/slices"
+
 	"github.com/inkyblackness/imgui-go/v4"
 )
 
@@ -20,6 +22,8 @@ type TypeEditorFn func(*TypeEditContext, reflect.Value) error
 
 type TypeEditContext struct {
 	Ed *ImguiEditor
+
+	assetPath string
 
 	// editContext is where GetContext saves its data
 	editContext map[unsafe.Pointer]map[any]any
@@ -31,9 +35,10 @@ type TypeEditContext struct {
 	hasChanged bool
 }
 
-func NewTypeEditContext(ed *ImguiEditor) *TypeEditContext {
+func NewTypeEditContext(ed *ImguiEditor, assetPath string) *TypeEditContext {
 	return &TypeEditContext{
 		Ed:               ed,
+		assetPath:        assetPath,
 		editContext:      map[unsafe.Pointer]map[any]any{},
 		structFieldStack: []*reflect.StructField{},
 	}
@@ -73,6 +78,10 @@ func (c *TypeEditContext) StructField() *reflect.StructField {
 		return nil
 	}
 	return c.structFieldStack[len(c.structFieldStack)-1]
+}
+
+func (c *TypeEditContext) ID(prefix string) string {
+	return prefix + c.assetPath
 }
 
 // if a type stored by using GetContext implements Disposable
@@ -122,12 +131,20 @@ type typeEditor struct {
 	// typeEditFuncs map an asset type string to the function
 	// that will be called when that type needs to be edited
 	typeEditFuncs map[string]TypeEditorFn
-	ed            *ImguiEditor
+
+	// interface editors are checked second
+	interfaceEditFuncs map[reflect.Type]TypeEditorFn
+
+	cachedEditFuncs map[string]TypeEditorFn
+
+	ed *ImguiEditor
 }
 
 func newTypeEditor() *typeEditor {
 	ret := &typeEditor{
-		typeEditFuncs: map[string]TypeEditorFn{},
+		typeEditFuncs:      map[string]TypeEditorFn{},
+		interfaceEditFuncs: map[reflect.Type]TypeEditorFn{},
+		cachedEditFuncs:    map[string]TypeEditorFn{},
 	}
 	ret.addPrimitiveTypes()
 
@@ -135,6 +152,18 @@ func newTypeEditor() *typeEditor {
 }
 
 func (e *typeEditor) AddType(typeToAdd any, edit TypeEditorFn) {
+	typ := reflect.TypeOf(typeToAdd)
+	if typ.Kind() != reflect.Pointer {
+		logger.Panicf("Value %v is not a pointer, this is a programming error", typeToAdd)
+	}
+	if typ.Elem().Kind() == reflect.Interface {
+		if typ.Elem().NumMethod() == 0 {
+			logger.Panicf("Interface to edit must have at least one method, this is a programming error")
+		}
+		e.interfaceEditFuncs[typ.Elem()] = edit
+		return
+	}
+
 	_, fullName := asset.ObjectTypeName(typeToAdd)
 	e.typeEditFuncs[fullName] = edit
 }
@@ -153,12 +182,41 @@ func (e *typeEditor) EditValue(context *TypeEditContext, value reflect.Value) {
 	}
 	// Get at the value being pointed to
 	value = value.Elem()
-	// see if there is a custom editor for this type in particular
-	edFn := e.typeEditFuncs[fullName]
+
+	if !value.CanSet() {
+		logger.Panicf("Value %v is not settable, this is a programming error", value)
+	}
+
+	var edFn TypeEditorFn
+	if fullName != "." {
+		var ok bool
+		// see if there is a cached editor for this specific type
+		if edFn, ok = e.typeEditFuncs[fullName]; ok {
+			edFn(context, value)
+			return
+		}
+		// we may have already calculated the edit function for this type
+		edFn, ok = e.cachedEditFuncs[fullName]
+		if !ok {
+			// see if there are interface functions that can handle this type
+			ptrToValue := value.Addr()
+			ifaceFns := e.gatherInterfaceEditorFuncs(ptrToValue)
+			edFn = e.customInterfaceEd(ifaceFns, fullName)
+
+			// always populate the cache, even if we made a nil fn
+			e.cachedEditFuncs[fullName] = edFn
+		}
+		if edFn != nil {
+			edFn(context, value)
+			return
+		}
+	}
+
+	// General handling
 	if edFn == nil {
 		switch value.Kind() {
 		case reflect.Struct:
-			edFn = structEd
+			edFn = StructEd
 
 		case reflect.Array:
 			fallthrough
@@ -173,12 +231,9 @@ func (e *typeEditor) EditValue(context *TypeEditContext, value reflect.Value) {
 	}
 
 	if edFn == nil {
-		unhandledEd(context, value)
-		return
+		edFn = unhandledEd
 	}
-	if !value.CanSet() {
-		logger.Panicf("Value %v is not settable, this is a programming error", value)
-	}
+
 	edFn(context, value)
 }
 
@@ -198,6 +253,55 @@ func unhandledEd(context *TypeEditContext, value reflect.Value) error {
 	_, fullName := asset.TypeName(value.Type())
 	edgui.Text("  - %s", fullName)
 	return nil
+}
+
+type ifaceFnPair struct {
+	typ reflect.Type
+	fn  TypeEditorFn
+}
+
+func (e *typeEditor) gatherInterfaceEditorFuncs(value reflect.Value) []ifaceFnPair {
+	matches := []reflect.Type{}
+	valueType := value.Type()
+	for typ := range e.interfaceEditFuncs {
+		if valueType.Implements(typ) {
+			matches = append(matches, typ)
+		}
+	}
+	slices.SortFunc(matches, func(a, b reflect.Type) bool {
+		return strings.Compare(a.Name(), b.Name()) == -1
+	})
+	ret := []ifaceFnPair{}
+	for _, key := range matches {
+		ret = append(ret, ifaceFnPair{
+			typ: key,
+			fn:  e.interfaceEditFuncs[key],
+		})
+	}
+	return ret
+}
+
+func (e *typeEditor) customInterfaceEd(pairs []ifaceFnPair, typeName string) TypeEditorFn {
+	if len(pairs) == 0 {
+		return nil
+	}
+	edFn := func(context *TypeEditContext, value reflect.Value) error {
+		// create tabs for each editor fn
+		if imgui.BeginTabBar("TabBar") {
+			defer imgui.EndTabBar()
+			for i, pair := range pairs {
+				name := fmt.Sprintf("%s##%d", pair.typ.Name(), i)
+				if imgui.BeginTabItem(name) {
+					pair.fn(context, value)
+					imgui.EndTabItem()
+				}
+			}
+
+		}
+		return nil
+	}
+
+	return edFn
 }
 
 type interfaceEdContext struct {
@@ -247,7 +351,7 @@ func interfaceEd(context *TypeEditContext, value reflect.Value) error {
 	return nil
 }
 
-func structEd(context *TypeEditContext, value reflect.Value) error {
+func StructEd(context *TypeEditContext, value reflect.Value) error {
 	t := value.Type()
 	if t.Kind() != reflect.Struct {
 		logger.Fatalf("Not a struct - %v", t.Kind())

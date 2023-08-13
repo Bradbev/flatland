@@ -7,6 +7,7 @@ import (
 	"flatland/src/flat"
 	"flatland/src/flat/editors"
 	"fmt"
+	"reflect"
 
 	"github.com/gabstv/ebiten-imgui/renderer"
 	"github.com/hajimehoshi/ebiten/v2"
@@ -35,12 +36,20 @@ func main() {
 	flat.RegisterAllFlatTypes()
 	editors.RegisterAllFlatEditors(gg.ed)
 
+	gg.ed.AddType(new(testInterfaceEditor), func(tec *editor.TypeEditContext, v reflect.Value) error {
+		imgui.Text("TestTab")
+		return nil
+	})
+
 	// load an asset to be edited by the test editor
 	a, err := asset.Load("apple-98.json")
 	fmt.Println(err)
 	defaultTestObject.AssetType = a
 	asset.Save("testobj.json", &defaultTestObject)
-	gg.ed.EditAsset("testobj.json")
+	//gg.ed.EditAsset("testobj.json")
+
+	asset.Save("testactor.json", &defaultActorObject)
+	gg.ed.EditAsset("testactor.json")
 
 	menu := edgui.Menu{
 		Name: "Custom Item",
@@ -61,6 +70,17 @@ func main() {
 
 type nestedIndirect struct {
 	NestedStr string
+}
+
+type actorTest struct {
+	flat.ActorBase
+	ActorBaseName string
+}
+
+func (a *actorTest) TestTab() {}
+
+type testInterfaceEditor interface {
+	TestTab()
 }
 
 // editTest demonstrates all the ways that the editor can
@@ -94,6 +114,8 @@ type editTest struct {
 var defaultTestObject = editTest{
 	Slice: []int{7, 4, 5, 6},
 }
+
+var defaultActorObject = actorTest{}
 
 // eventually this struct will vanish and the whole loop
 // will live in the editor

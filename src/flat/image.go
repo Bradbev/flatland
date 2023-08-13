@@ -47,34 +47,48 @@ func (i *Image) Reset() {
 type ImageComponent struct {
 	ComponentBase
 	Image      *Image
-	image      *ebiten.Image
 	dimensions vector2.Vector2
 	op         ebiten.DrawImageOptions
-	geoM       ebiten.GeoM
 }
 
 var _ = Component((*ImageComponent)(nil))
 
-func (a *ImageComponent) SetImage(image *ebiten.Image) {
-	a.image = image
-	bounds := image.Bounds()
-	x, y := bounds.Dx(), bounds.Dy()
-	a.dimensions.Set(float64(x), float64(y))
-	a.op = ebiten.DrawImageOptions{
+func (c *ImageComponent) BeginPlay() {
+	if c.Image.GetImage() != nil {
+		bounds := c.Image.GetImage().Bounds()
+		x, y := bounds.Dx(), bounds.Dy()
+		c.dimensions.Set(float64(x), float64(y))
+	}
+	c.op = ebiten.DrawImageOptions{
 		Filter: ebiten.FilterLinear,
 	}
-	a.geoM = ebiten.GeoM{}
-	a.geoM.Translate(-a.dimensions.X/2.0, -a.dimensions.Y/2.0)
+	c.op.GeoM = ebiten.GeoM{}
+	// images start with the centre of the image at 0,0
+	c.op.GeoM.Translate(-c.dimensions.X/2.0, -c.dimensions.Y/2.0)
 }
 
-func (a *ImageComponent) Draw(screen *ebiten.Image) {
-	op := &ebiten.DrawImageOptions{}
-	op.GeoM = a.geoM
-	t := a.Owner().GetTransform()
-	op.GeoM.Scale(t.Scale, t.Scale)
-	op.GeoM.Rotate(t.Rotation * math.Pi / 180.0)
-	op.GeoM.Translate(t.Location.X, t.Location.Y)
-	if a.Image != nil && a.Image.GetImage() != nil {
-		screen.DrawImage(a.Image.GetImage(), op)
+func (c *ImageComponent) Draw(screen *ebiten.Image) {
+	op := c.op
+
+	ApplyComponentTransforms(c, &op.GeoM)
+	if c.Image != nil && c.Image.GetImage() != nil {
+		screen.DrawImage(c.Image.GetImage(), &op)
+	}
+}
+
+func ApplyTransform(transform Transform2D, geom *ebiten.GeoM) {
+	geom.Scale(transform.ScaleX, transform.ScaleY)
+	geom.Rotate(transform.Rotation * math.Pi / 180.0)
+	geom.Translate(transform.Location.X, transform.Location.Y)
+}
+
+// Apply all the transforms up the owning chain so that nested components
+// can have relative transforms
+func ApplyComponentTransforms(tr Transformer, geom *ebiten.GeoM) {
+	ApplyTransform(tr.GetTransform(), geom)
+	if comp, ok := tr.(Component); ok {
+		if owningTransformer, ok := comp.Owner().(Transformer); ok {
+			ApplyComponentTransforms(owningTransformer, geom)
+		}
 	}
 }

@@ -1,0 +1,15 @@
+{
+  "Type": "github.com/bradbev/flatland/src/flat.World",
+  "Inner": {
+    "PersistentActors": [
+      {
+        "Type": "github.com/bradbev/flatland/examples/fruitroids/src/fruitroids.Ship",
+        "Path": "ship.json"
+      },
+      {
+        "Type": "github.com/bradbev/flatland/examples/fruitroids/src/fruitroids.Ship",
+        "Path": "ship2.json"
+      }
+    ]
+  }
+}

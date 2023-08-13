@@ -1,0 +1,21 @@
+{
+  "Type": "github.com/bradbev/flatland/src/flat.ImageComponent",
+  "Inner": {
+    "ComponentBase": {
+      "Transform": {
+        "Location": {
+          "X": 0,
+          "Y": 0,
+          "Z": 0
+        },
+        "Rotation": 0,
+        "ScaleX": 1,
+        "ScaleY": 1
+      }
+    },
+    "Image": {
+      "Type": "github.com/bradbev/flatland/src/flat.Image",
+      "Path": "banana.json"
+    }
+  }
+}

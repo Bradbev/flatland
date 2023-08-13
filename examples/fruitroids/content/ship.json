@@ -1,0 +1,27 @@
+{
+  "Type": "github.com/bradbev/flatland/examples/fruitroids/src/fruitroids.Ship",
+  "Inner": {
+    "ActorBase": {
+      "Components": [
+        {
+          "Type": "github.com/bradbev/flatland/src/flat.ImageComponent",
+          "Path": "imagecomp.json"
+        }
+      ],
+      "Transform": {
+        "Location": {
+          "X": 109,
+          "Y": 88,
+          "Z": 0
+        },
+        "Rotation": -22,
+        "ScaleX": 0.07999999821186066,
+        "ScaleY": 0.07999999821186066
+      }
+    },
+    "Image": {
+      "Type": "github.com/bradbev/flatland/src/flat.Image",
+      "Path": "apple.json"
+    }
+  }
+}

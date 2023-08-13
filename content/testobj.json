@@ -1,0 +1,38 @@
+{
+  "Type": "main.editTest",
+  "Inner": {
+    "Array": [
+      0,
+      0,
+      0
+    ],
+    "AssetType": {
+      "Type": "github.com/bradbev/flatland/src/flat.Image",
+      "Path": "apple-98.json"
+    },
+    "Bool": false,
+    "Flt": 0,
+    "Flt64": 0,
+    "Int": 0,
+    "NestedImmediate": {
+      "NestedFloat": 0,
+      "NestedFloat2": 0
+    },
+    "NestedIndirectField": {
+      "NestedStr": ""
+    },
+    "Path": "",
+    "Slice": [
+      7,
+      4,
+      5,
+      6
+    ],
+    "String": "",
+    "StringSlice": [],
+    "StructSlice": [],
+    "SupportNestedCustomEditors": {
+      "Path": ""
+    }
+  }
+}

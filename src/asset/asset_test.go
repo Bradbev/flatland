@@ -1,0 +1,323 @@
+package asset_test
+
+import (
+	"encoding/json"
+	"fmt"
+	"io/fs"
+	"reflect"
+	"testing"
+
+	"github.com/bradbev/flatland/src/asset"
+
+	"github.com/psanford/memfs"
+	"github.com/stretchr/testify/assert"
+)
+
+type testAsset struct {
+	Anykey         string
+	postLoadCalled bool
+}
+
+func (t *testAsset) PostLoad() {
+	t.postLoadCalled = true
+}
+
+func TestAssetLoad(t *testing.T) {
+	data := `{
+	"Type": "github.com/bradbev/flatland/src/asset_test.testAsset",
+	"Inner": {
+		"Anykey": "hi"
+	}
+}`
+	testAssetLoad := func(callback func()) {
+		asset.Reset()
+		name := asset.Path("asset.json")
+		callback()
+		newTestAsset(name, data)
+
+		a, err := asset.Load(name)
+		assert.NoError(t, err)
+		toTest, ok := a.(*testAsset)
+		assert.True(t, ok, "Unable to convert %v to testType", a)
+		assert.Equal(t, toTest.Anykey, "hi")
+		assert.True(t, toTest.postLoadCalled, "PostLoad was not called")
+	}
+	testAssetLoad(func() {
+		t.Log("Testing RegisterAsset")
+		asset.RegisterAsset(testAsset{})
+	})
+	testAssetLoad(func() {
+		t.Log("Testing RegisterAssetFactory")
+		asset.RegisterAssetFactory(testAsset{}, func() (asset.Asset, error) { return &testAsset{}, nil })
+	})
+}
+
+func newTestAsset(name asset.Path, data string) {
+	rootFS := memfs.New()
+	rootFS.WriteFile(string(name), []byte(data), 0777)
+	asset.RegisterFileSystem(rootFS, 0)
+}
+
+type writeFS struct {
+	fs *memfs.FS
+}
+
+func newWriteFS() *writeFS {
+	return &writeFS{
+		fs: memfs.New(),
+	}
+}
+
+func (f *writeFS) WriteFile(path asset.Path, data []byte) error {
+	return f.fs.WriteFile(string(path), data, 0777)
+}
+
+type js = map[string]any
+
+func TestAssetSave(t *testing.T) {
+	asset.Reset()
+	wfs := newWriteFS()
+	asset.RegisterWritableFileSystem(wfs)
+	asset.RegisterAsset(testAsset{})
+
+	name := asset.Path("asset.json")
+	a := &testAsset{Anykey: "saved"}
+	err := asset.Save(name, a)
+	assert.NoError(t, err)
+
+	back, err := fs.ReadFile(wfs.fs, string(name))
+	assert.NoError(t, err)
+
+	jsonBack := js{}
+	err = json.Unmarshal(back, &jsonBack)
+	assert.NoError(t, err)
+
+	expected := js{
+		"Type": "github.com/bradbev/flatland/src/asset_test.testAsset",
+		"Inner": js{
+			"Anykey": "saved",
+		},
+	}
+	assert.Equal(t, expected, jsonBack)
+
+	testLoad := func(postLoadState bool, msg string) {
+		asset.RegisterFileSystem(wfs.fs, 0)
+		loaded, err := asset.Load(name)
+		assert.NoError(t, err)
+
+		expectedObj := &testAsset{Anykey: "saved", postLoadCalled: postLoadState}
+		assert.Equal(t, expectedObj, loaded)
+	}
+	testLoad(false, "Expected post load to be false because we have only saved the asset and kept hold of the orignal object")
+	asset.Reset()
+	asset.RegisterAsset(testAsset{})
+	testLoad(true, "Expected post load to be true because we reset the asset package")
+}
+
+func TestAssetList(t *testing.T) {
+	asset.Reset()
+	asset.RegisterAsset(testAsset{})
+
+	expected := "github.com/bradbev/flatland/src/asset_test.testAsset"
+	assets := asset.GetAssetDescriptors()
+	assert.Equal(t, expected, assets[0].FullName, "Names don't match")
+}
+func TestAssetCreate(t *testing.T) {
+	asset.Reset()
+	asset.RegisterAsset(testAsset{})
+
+	allAssets := asset.GetAssetDescriptors()
+
+	obj, err := allAssets[0].Create()
+	assert.NoError(t, err)
+
+	_, ok := obj.(*testAsset)
+
+	assert.True(t, ok)
+
+}
+
+type testAssetNode struct {
+	Name      string
+	Inline    testAssetLeaf
+	Reference *testAssetLeaf
+}
+
+type testAssetLeaf struct {
+	SecondName string
+}
+
+/*
+Linked Assets
+  - Value types are saved inline
+  - Pointers and interfaces are checked to see if the asset has already been
+    loaded.  If it is an existing asset, the path will be saved.
+  - Pointers that are not asset-loaded are discarded, ie - transient
+*/
+
+// TestAssetSaveLinked is primarily about ensuring that testAssetNode
+// is saved such that node.Reference is an object that contains a path
+// to load, ie - not serialized as if it were inline.
+func TestAssetSaveLinked(t *testing.T) {
+	asset.Reset()
+	rootFS := newWriteFS()
+	asset.RegisterFileSystem(rootFS.fs, 0)
+	asset.RegisterWritableFileSystem(rootFS)
+
+	asset.RegisterAsset(testAssetNode{})
+	asset.RegisterAsset(testAssetLeaf{})
+
+	leaf := &testAssetLeaf{SecondName: "Leaf"}
+	err := asset.Save("leaf.json", leaf)
+	assert.NoError(t, err)
+	node := &testAssetNode{
+		Name:      "node",
+		Inline:    testAssetLeaf{SecondName: "inline"},
+		Reference: leaf,
+	}
+	err = asset.Save("node.json", node)
+	assert.NoError(t, err)
+
+	bytesBack, err := fs.ReadFile(rootFS.fs, "node.json")
+	assert.NoError(t, err)
+	expected :=
+		`{
+  "Type": "github.com/bradbev/flatland/src/asset_test.testAssetNode",
+  "Inner": {
+    "Inline": {
+      "SecondName": "inline"
+    },
+    "Name": "node",
+    "Reference": {
+      "Type": "github.com/bradbev/flatland/src/asset_test.testAssetLeaf",
+      "Path": "leaf.json"
+    }
+  }
+}`
+	assert.Equal(t, expected, string(bytesBack))
+
+	bytesBack, err = fs.ReadFile(rootFS.fs, "leaf.json")
+	leafExpected :=
+		`{
+  "Type": "github.com/bradbev/flatland/src/asset_test.testAssetLeaf",
+  "Inner": {
+    "SecondName": "Leaf"
+  }
+}`
+	assert.Equal(t, leafExpected, string(bytesBack))
+
+}
+
+// Loading needs to unmarshal Json into a generic map
+// and iterate the members of a struct.  Pointers and
+// interface members cannot be directly loaded, instead
+// they must be inspected in the json and loaded from
+// disk, then replaced in the map with the real value
+// Finally the general map needs to be loaded into the
+// target structure.
+func TestAssetLoadLinked(t *testing.T) {
+	asset.Reset()
+	rootFS := newWriteFS()
+	asset.RegisterFileSystem(rootFS.fs, 0)
+	asset.RegisterWritableFileSystem(rootFS)
+
+	asset.RegisterAsset(testAssetNode{})
+	asset.RegisterAsset(testAssetLeaf{})
+
+	leafRaw := `{
+		"Type": "github.com/bradbev/flatland/src/asset_test.testAssetLeaf",
+		"Inner": {
+		  "SecondName": "Leaf"
+		}
+	  }`
+	err := rootFS.WriteFile("leaf.json", []byte(leafRaw))
+	assert.NoError(t, err)
+
+	nodeRaw := `{
+		"Type": "github.com/bradbev/flatland/src/asset_test.testAssetNode",
+		"Inner": {
+		  "Inline": {
+			"SecondName": "inline"
+		  },
+		  "Name": "node",
+		  "Reference": {
+			"Type": "github.com/bradbev/flatland/src/asset_test.testAssetLeaf",
+			"Path": "leaf.json"
+		  }
+		}
+	  }`
+	err = rootFS.WriteFile("node.json", []byte(nodeRaw))
+	assert.NoError(t, err)
+
+	nodeAsset, err := asset.Load("node.json")
+	assert.NoError(t, err)
+
+	node := nodeAsset.(*testAssetNode)
+
+	expected := testAssetLeaf{SecondName: "Leaf"}
+	assert.Equal(t, expected, *node.Reference, "Reference needs to be loaded from disk, not default")
+}
+
+type Float float32
+type MyBool bool
+type Ints []int
+type Bytes []byte
+type testAssetPath struct {
+	Path asset.Path
+	Flt  Float
+	Bool MyBool
+	B    Bytes
+	I    Ints
+}
+
+func TestAliasedTypes(t *testing.T) {
+	rootFS := newWriteFS()
+	reset := func() {
+		asset.Reset()
+		asset.RegisterFileSystem(rootFS.fs, 0)
+		asset.RegisterWritableFileSystem(rootFS)
+		asset.RegisterAsset(testAssetPath{})
+	}
+
+	reset()
+	toSave := &testAssetPath{
+		Path: "pathType",
+		Flt:  5,
+		Bool: true,
+		I:    Ints{4, 5, 6},
+		B:    Bytes("Bytes I Saved"),
+	}
+	err := asset.Save("pathtest.json", toSave)
+	assert.NoError(t, err)
+
+	//b, _ := fs.ReadFile(rootFS.fs, "pathtest.json")
+	//fmt.Printf("%v", string(b))
+	//t.Fail()
+
+	reset()
+	loaded, err := asset.Load("pathtest.json")
+	assert.NoError(t, err)
+
+	assert.Equal(t, toSave, loaded)
+}
+
+type reflectStr struct {
+	Foo string
+}
+
+func TestReflectCopy(t *testing.T) {
+	p := fmt.Printf
+	a := &reflectStr{"This is A"}
+	wrappedA := any(a) // interface of (*reflectStr, a)
+
+	typeToMake := reflect.TypeOf(wrappedA).Elem() // type is reflectStr
+	p("typeToMake %v\n", typeToMake)
+
+	b := reflect.New(typeToMake) // returns a *typeToMake
+	b.Elem().Set(reflect.ValueOf(wrappedA).Elem())
+
+	assert.Equal(t, a, b.Interface()) // they're equal!
+
+	a.Foo = "bar"
+	assert.NotEqual(t, a, b.Interface())
+}

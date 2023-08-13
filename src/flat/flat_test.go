@@ -1,8 +1,9 @@
 package flat_test
 
 import (
-	"flatland/src/flat"
 	"testing"
+
+	"github.com/bradbev/flatland/src/flat"
 
 	"github.com/stretchr/testify/assert"
 )

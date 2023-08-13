@@ -1,5 +1,5 @@
 {
-  "Type": "flatland/src/flat.Image",
+  "Type": "github.com/bradbev/flatland/src/flat.Image",
   "Inner": {
     "Path": "raw/banana-png-19639.png"
   }

@@ -2,13 +2,14 @@ package editor
 
 import (
 	"errors"
-	"flatland/src/asset"
-	"flatland/src/editor/edgui"
 	"fmt"
 	"io/fs"
 	"os"
 	"path/filepath"
 	"strings"
+
+	"github.com/bradbev/flatland/src/asset"
+	"github.com/bradbev/flatland/src/editor/edgui"
 
 	"github.com/gabstv/ebiten-imgui/renderer"
 	"github.com/hajimehoshi/ebiten/v2"

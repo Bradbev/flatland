@@ -2,12 +2,13 @@ package flat
 
 import (
 	"bytes"
-	"flatland/src/asset"
 	"fmt"
 	"image"
 	_ "image/png"
 	"log"
 	"math"
+
+	"github.com/bradbev/flatland/src/asset"
 
 	"github.com/deeean/go-vector/vector2"
 	"github.com/hajimehoshi/ebiten/v2"

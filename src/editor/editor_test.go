@@ -1,10 +1,11 @@
 package editor
 
 import (
-	"flatland/src/flat"
 	"fmt"
 	"reflect"
 	"testing"
+
+	"github.com/bradbev/flatland/src/flat"
 
 	"github.com/stretchr/testify/assert"
 )

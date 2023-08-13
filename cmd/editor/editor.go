@@ -1,13 +1,14 @@
 package main
 
 import (
-	"flatland/src/asset"
-	"flatland/src/editor"
-	"flatland/src/editor/edgui"
-	"flatland/src/flat"
-	"flatland/src/flat/editors"
 	"fmt"
 	"reflect"
+
+	"github.com/bradbev/flatland/src/asset"
+	"github.com/bradbev/flatland/src/editor"
+	"github.com/bradbev/flatland/src/editor/edgui"
+	"github.com/bradbev/flatland/src/flat"
+	"github.com/bradbev/flatland/src/flat/editors"
 
 	"github.com/gabstv/ebiten-imgui/renderer"
 	"github.com/hajimehoshi/ebiten/v2"

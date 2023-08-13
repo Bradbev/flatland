@@ -1,6 +1,6 @@
 package flat
 
-import "flatland/src/asset"
+import "github.com/bradbev/flatland/src/asset"
 
 func RegisterAllFlatTypes() {
 	asset.RegisterAsset(Image{})

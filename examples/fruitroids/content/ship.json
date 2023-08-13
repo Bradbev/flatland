@@ -1,10 +1,10 @@
 {
-  "Type": "flatland/examples/fruitroids/src/fruitroids.Ship",
+  "Type": "github.com/bradbev/flatland/examples/fruitroids/src/fruitroids.Ship",
   "Inner": {
     "ActorBase": {
       "Components": [
         {
-          "Type": "flatland/src/flat.ImageComponent",
+          "Type": "github.com/bradbev/flatland/src/flat.ImageComponent",
           "Path": "imagecomp.json"
         }
       ],
@@ -20,7 +20,7 @@
       }
     },
     "Image": {
-      "Type": "flatland/src/flat.Image",
+      "Type": "github.com/bradbev/flatland/src/flat.Image",
       "Path": "apple.json"
     }
   }

@@ -1,4 +1,4 @@
-module flatland
+module github.com/bradbev/flatland
 
 go 1.20
 

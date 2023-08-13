@@ -1,12 +1,13 @@
 package editors
 
 import (
-	"flatland/src/asset"
-	"flatland/src/editor"
-	"flatland/src/editor/edgui"
-	"flatland/src/flat"
 	"image/color"
 	"reflect"
+
+	"github.com/bradbev/flatland/src/asset"
+	"github.com/bradbev/flatland/src/editor"
+	"github.com/bradbev/flatland/src/editor/edgui"
+	"github.com/bradbev/flatland/src/flat"
 
 	"github.com/hajimehoshi/ebiten/v2"
 	"github.com/inkyblackness/imgui-go/v4"

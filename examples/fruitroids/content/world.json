@@ -1,13 +1,13 @@
 {
-  "Type": "flatland/src/flat.World",
+  "Type": "github.com/bradbev/flatland/src/flat.World",
   "Inner": {
     "PersistentActors": [
       {
-        "Type": "flatland/examples/fruitroids/src/fruitroids.Ship",
+        "Type": "github.com/bradbev/flatland/examples/fruitroids/src/fruitroids.Ship",
         "Path": "ship.json"
       },
       {
-        "Type": "flatland/examples/fruitroids/src/fruitroids.Ship",
+        "Type": "github.com/bradbev/flatland/examples/fruitroids/src/fruitroids.Ship",
         "Path": "ship2.json"
       }
     ]

@@ -1,12 +1,13 @@
 package main
 
 import (
-	"flatland/examples/fruitroids/src/fruitroids"
-	"flatland/src/asset"
-	"flatland/src/editor"
-	"flatland/src/flat"
-	"flatland/src/flat/editors"
 	"fmt"
+
+	"github.com/bradbev/flatland/examples/fruitroids/src/fruitroids"
+	"github.com/bradbev/flatland/src/asset"
+	"github.com/bradbev/flatland/src/editor"
+	"github.com/bradbev/flatland/src/flat"
+	"github.com/bradbev/flatland/src/flat/editors"
 
 	"github.com/gabstv/ebiten-imgui/renderer"
 	"github.com/hajimehoshi/ebiten/v2"

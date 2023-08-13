@@ -1,5 +1,5 @@
 {
-  "Type": "flatland/examples/fruitroids/src/fruitroids.Ship",
+  "Type": "github.com/bradbev/flatland/examples/fruitroids/src/fruitroids.Ship",
   "Inner": {
     "ActorBase": {
       "Transform": {

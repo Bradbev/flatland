@@ -2,14 +2,15 @@ package editor
 
 // this file is the general editor implementation
 import (
-	"flatland/src/asset"
-	"flatland/src/editor/edgui"
 	"fmt"
 	"io/fs"
 	"log"
 	"reflect"
 	"strings"
 	"unsafe"
+
+	"github.com/bradbev/flatland/src/asset"
+	"github.com/bradbev/flatland/src/editor/edgui"
 
 	"golang.org/x/exp/slices"
 

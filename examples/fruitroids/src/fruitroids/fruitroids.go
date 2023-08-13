@@ -1,9 +1,10 @@
 package fruitroids
 
 import (
-	"flatland/src/asset"
-	"flatland/src/flat"
 	"fmt"
+
+	"github.com/bradbev/flatland/src/asset"
+	"github.com/bradbev/flatland/src/flat"
 
 	"github.com/hajimehoshi/ebiten/v2"
 	"github.com/hajimehoshi/ebiten/v2/ebitenutil"

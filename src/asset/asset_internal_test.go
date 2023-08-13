@@ -53,7 +53,7 @@ func TestBuildJsonToSave(t *testing.T) {
 0
 ],
 "AssetType": {
-"Type": "flatland/src/asset.testLeaf",
+"Type": "github.com/bradbev/flatland/src/asset.testLeaf",
 "Path": "fullPath.json"
 },
 "Flt": 0,
@@ -64,13 +64,13 @@ func TestBuildJsonToSave(t *testing.T) {
 "Name": "Node",
 "Num": 0,
 "Ref": {
-"Type": "flatland/src/asset.testLeaf",
+"Type": "github.com/bradbev/flatland/src/asset.testLeaf",
 "Path": "fullPath.json"
 },
 "Slice": [],
 "SliceOfIface": [
 {
-"Type": "flatland/src/asset.testLeaf",
+"Type": "github.com/bradbev/flatland/src/asset.testLeaf",
 "Path": "fullPath.json"
 }
 ],
@@ -95,11 +95,11 @@ func TestUnmashallFromAny(t *testing.T) {
 		"Array":[4,5],
 		"Inline": {"Leaf":"InlineLeaf"},
 		"Ref": {
-			"Type": "flatland/src/asset.testLeaf",
+			"Type": "github.com/bradbev/flatland/src/asset.testLeaf",
 			"Path": "fullPath.json"
 		},
 		"AssetType": {
-			"Type": "flatland/src/asset.testLeaf",
+			"Type": "github.com/bradbev/flatland/src/asset.testLeaf",
 			"Path": "fullPath.json"
 		}
 	}`

@@ -1,7 +1,7 @@
 package editor
 
 import (
-	"flatland/src/editor/edgui"
+	"github.com/bradbev/flatland/src/editor/edgui"
 
 	"github.com/inkyblackness/imgui-go/v4"
 )

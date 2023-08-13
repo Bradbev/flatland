@@ -1,11 +1,12 @@
 package main
 
 import (
-	"flatland/examples/fruitroids/src/fruitroids"
-	"flatland/src/asset"
-	"flatland/src/flat"
 	"fmt"
 	"os"
+
+	"github.com/bradbev/flatland/examples/fruitroids/src/fruitroids"
+	"github.com/bradbev/flatland/src/asset"
+	"github.com/bradbev/flatland/src/flat"
 
 	"github.com/hajimehoshi/ebiten/v2"
 )

@@ -2,11 +2,12 @@ package asset_test
 
 import (
 	"encoding/json"
-	"flatland/src/asset"
 	"fmt"
 	"io/fs"
 	"reflect"
 	"testing"
+
+	"github.com/bradbev/flatland/src/asset"
 
 	"github.com/psanford/memfs"
 	"github.com/stretchr/testify/assert"
@@ -23,7 +24,7 @@ func (t *testAsset) PostLoad() {
 
 func TestAssetLoad(t *testing.T) {
 	data := `{
-	"Type": "flatland/src/asset_test.testAsset",
+	"Type": "github.com/bradbev/flatland/src/asset_test.testAsset",
 	"Inner": {
 		"Anykey": "hi"
 	}
@@ -92,7 +93,7 @@ func TestAssetSave(t *testing.T) {
 	assert.NoError(t, err)
 
 	expected := js{
-		"Type": "flatland/src/asset_test.testAsset",
+		"Type": "github.com/bradbev/flatland/src/asset_test.testAsset",
 		"Inner": js{
 			"Anykey": "saved",
 		},
@@ -117,7 +118,7 @@ func TestAssetList(t *testing.T) {
 	asset.Reset()
 	asset.RegisterAsset(testAsset{})
 
-	expected := "flatland/src/asset_test.testAsset"
+	expected := "github.com/bradbev/flatland/src/asset_test.testAsset"
 	assets := asset.GetAssetDescriptors()
 	assert.Equal(t, expected, assets[0].FullName, "Names don't match")
 }
@@ -181,14 +182,14 @@ func TestAssetSaveLinked(t *testing.T) {
 	assert.NoError(t, err)
 	expected :=
 		`{
-  "Type": "flatland/src/asset_test.testAssetNode",
+  "Type": "github.com/bradbev/flatland/src/asset_test.testAssetNode",
   "Inner": {
     "Inline": {
       "SecondName": "inline"
     },
     "Name": "node",
     "Reference": {
-      "Type": "flatland/src/asset_test.testAssetLeaf",
+      "Type": "github.com/bradbev/flatland/src/asset_test.testAssetLeaf",
       "Path": "leaf.json"
     }
   }
@@ -198,7 +199,7 @@ func TestAssetSaveLinked(t *testing.T) {
 	bytesBack, err = fs.ReadFile(rootFS.fs, "leaf.json")
 	leafExpected :=
 		`{
-  "Type": "flatland/src/asset_test.testAssetLeaf",
+  "Type": "github.com/bradbev/flatland/src/asset_test.testAssetLeaf",
   "Inner": {
     "SecondName": "Leaf"
   }
@@ -224,7 +225,7 @@ func TestAssetLoadLinked(t *testing.T) {
 	asset.RegisterAsset(testAssetLeaf{})
 
 	leafRaw := `{
-		"Type": "flatland/src/asset_test.testAssetLeaf",
+		"Type": "github.com/bradbev/flatland/src/asset_test.testAssetLeaf",
 		"Inner": {
 		  "SecondName": "Leaf"
 		}
@@ -233,14 +234,14 @@ func TestAssetLoadLinked(t *testing.T) {
 	assert.NoError(t, err)
 
 	nodeRaw := `{
-		"Type": "flatland/src/asset_test.testAssetNode",
+		"Type": "github.com/bradbev/flatland/src/asset_test.testAssetNode",
 		"Inner": {
 		  "Inline": {
 			"SecondName": "inline"
 		  },
 		  "Name": "node",
 		  "Reference": {
-			"Type": "flatland/src/asset_test.testAssetLeaf",
+			"Type": "github.com/bradbev/flatland/src/asset_test.testAssetLeaf",
 			"Path": "leaf.json"
 		  }
 		}

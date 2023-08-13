@@ -1,11 +1,12 @@
 package editor
 
 import (
-	"flatland/src/asset"
-	"flatland/src/editor/edgui"
 	"fmt"
 	"path/filepath"
 	"strings"
+
+	"github.com/bradbev/flatland/src/asset"
+	"github.com/bradbev/flatland/src/editor/edgui"
 
 	"github.com/inkyblackness/imgui-go/v4"
 )

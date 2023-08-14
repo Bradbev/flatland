@@ -1,7 +1,6 @@
 package flat
 
 import (
-	"github.com/deeean/go-vector/vector3"
 	"github.com/hajimehoshi/ebiten/v2"
 )
 
@@ -18,7 +17,7 @@ type Component interface {
 }
 
 type Transformer interface {
-	GetTransform() Transform2D
+	GetTransform() Transform
 }
 
 type Tickable interface {
@@ -34,11 +33,11 @@ type Playable interface {
 }
 
 type ComponentBase struct {
-	Transform Transform2D
+	Transform Transform
 	owner     any
 }
 
-func (c *ComponentBase) GetTransform() Transform2D {
+func (c *ComponentBase) GetTransform() Transform {
 	return c.Transform
 }
 
@@ -49,15 +48,8 @@ func (c *ComponentBase) Owner() any {
 	return c.owner
 }
 
-type Transform2D struct {
-	Location vector3.Vector3
-	Rotation float64
-	ScaleX   float64
-	ScaleY   float64
-}
-
 type ActorBase struct {
-	Transform          Transform2D
+	Transform          Transform
 	Components         []Component
 	tickableComponents []Tickable
 	drawableComponents []Drawable
@@ -89,7 +81,7 @@ func (a *ActorBase) BeginPlay() {
 
 func (a *ActorBase) IsActor() {}
 
-func (a *ActorBase) GetTransform() Transform2D {
+func (a *ActorBase) GetTransform() Transform {
 	return a.Transform
 }
 

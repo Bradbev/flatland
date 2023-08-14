@@ -27,12 +27,9 @@ func main() {
 
 	flat.RegisterAllFlatTypes()
 	editors.RegisterAllFlatEditors(gg.ed)
+	// add the game specific types
 	fruitroids.RegisterFruitroidTypes()
 
-	//game.World = flat.NewWorld()
-	//ship, err := asset.Load("ship.json")
-	//fmt.Println(err)
-	//game.World.AddActor(ship)
 	gg.ed.StartGameCallback(func() ebiten.Game {
 		world, err := asset.Load("world.json")
 		fmt.Println(err)
@@ -58,26 +55,19 @@ func (g *G) Draw(screen *ebiten.Image) {
 }
 
 func (g *G) Update() error {
-	g.mgr.Update(1.0 / 60.0)
+	updateRate := float32(1.0 / 60.0)
+	var err error
+
+	g.mgr.Update(updateRate)
 	g.mgr.BeginFrame()
 	{
-		g.ed.Update(1.0 / float32(ebiten.ActualTPS()))
+		err = g.ed.Update(updateRate)
 	}
 	g.mgr.EndFrame()
-	return nil
+	return err
 }
 
 func (g *G) Layout(outsideWidth, outsideHeight int) (int, int) {
-	/*
-		if g.retina {
-			m := ebiten.DeviceScaleFactor()
-			g.w = int(float64(outsideWidth) * m)
-			g.h = int(float64(outsideHeight) * m)
-		} else {
-			g.w = outsideWidth
-			g.h = outsideHeight
-		}
-	*/
 	g.w = outsideWidth
 	g.h = outsideHeight
 	g.mgr.SetDisplaySize(float32(g.w), float32(g.h))

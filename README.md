@@ -19,3 +19,12 @@ recursively load any assets that are linked.
 # Custom asset editors are easy to write
 If you know a little imgui, you can write custom editors for your types, see
 `image_ed.go` for an example.
+
+# Actors and Components
+Basically everything in the game should be an `Actor` - something that has a
+`Transform2D` and exists in the world.  There are various interfaces an Actor
+can implement (`Drawable`,`Tickable`,`Playable`) to be hooked into the main game
+loop.  Your own `Actors` can embed `ActorBase` to get the default behaviours.
+`Components` are a way to implement features - a composition over inheritance
+pattern.  You can dynamically attach `Components` to `Actors` in the editor and
+they will start ticking/drawing/etc.

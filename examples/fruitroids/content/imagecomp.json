@@ -15,7 +15,7 @@
     },
     "Image": {
       "Type": "github.com/bradbev/flatland/src/flat.Image",
-      "Path": "banana.json"
+      "Path": "apple.json"
     }
   }
 }

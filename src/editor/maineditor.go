@@ -29,6 +29,8 @@ type ImguiEditor struct {
 	fsysRead  fs.FS
 	fsysWrite asset.WriteableFileSystem
 
+	shouldQuit bool
+
 	menu menuManager
 
 	drawables []Drawable
@@ -100,6 +102,9 @@ func (e *ImguiEditor) Update(deltaseconds float32) error {
 	})
 
 	e.pie.Update(deltaseconds)
+	if e.shouldQuit {
+		return fmt.Errorf("Quit")
+	}
 	return nil
 }
 
@@ -225,7 +230,7 @@ func (ed *ImguiEditor) createMenu(m *menuManager) {
 	m.AddMenu(edgui.Menu{
 		Name: "File",
 		Items: []*edgui.MenuItem{
-			i("Quit", func() { panic("Quit") }),
+			i("Quit", func() { ed.shouldQuit = true }),
 		},
 	})
 	m.AddMenu(edgui.Menu{

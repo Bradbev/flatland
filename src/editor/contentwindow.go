@@ -73,8 +73,6 @@ func (c *contentWindow) Draw() error {
 						c.SelectedContentItems[text],
 						imgui.SelectableFlagsAllowDoubleClick, imgui.Vec2{}) {
 
-						// if ctrl down
-						//c.SelectedContentItems[text] = !c.SelectedContentItems[text]
 						if imgui.IsMouseDoubleClicked(0) {
 							c.editor.EditAsset(filepath.Join(c.SelectedDir, text))
 						}

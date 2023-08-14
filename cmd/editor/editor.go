@@ -28,12 +28,12 @@ func main() {
 	ebiten.SetWindowResizingMode(ebiten.WindowResizingModeEnabled)
 
 	gg := &G{
-		mgr:    mgr,
-		dscale: ebiten.DeviceScaleFactor(),
-		ed:     editor.New("./content", mgr),
+		mgr: mgr,
+		//dscale: ebiten.DeviceScaleFactor(),
+		ed: editor.New("./content", mgr),
 	}
 
-	asset.RegisterAsset(editTest{})
+	//asset.RegisterAsset(editTest{})
 	flat.RegisterAllFlatTypes()
 	editors.RegisterAllFlatEditors(gg.ed)
 
@@ -137,13 +137,14 @@ func (g *G) Draw(screen *ebiten.Image) {
 }
 
 func (g *G) Update() error {
-	g.mgr.Update(1.0 / 60.0)
+	updateRate := float32(1.0 / 60.0)
+	g.mgr.Update(updateRate)
 	if inpututil.IsKeyJustPressed(ebiten.KeyC) {
 		g.mgr.ClipMask = !g.mgr.ClipMask
 	}
 	g.mgr.BeginFrame()
 	{
-		g.ed.Update(1.0 / float32(ebiten.ActualTPS()))
+		g.ed.Update(updateRate)
 		if g.showDemoWindow {
 			imgui.ShowDemoWindow(&g.showDemoWindow)
 		}

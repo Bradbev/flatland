@@ -28,6 +28,24 @@ func (a *assetManagerImpl) LoadWithOptions(assetPath Path, options LoadOptions) 
 	// load the generic format and validate things
 	container := loadedAssetContainer{}
 	err = json.Unmarshal(data, &container)
+	if err != nil {
+		return nil, err
+	}
+
+	loadedAsset, err := a.loadFromLoadedAssetContainer(&container, alreadyLoadedAsset)
+	if err != nil {
+		return nil, err
+	}
+
+	if err == nil {
+		// save the references to these assets to prevent future loading
+		a.AssetToLoadPath[loaded] = assetPath
+		a.LoadPathToAsset[assetPath] = loadedAsset
+	}
+	return loadedAsset, nil
+}
+
+func (a *assetManagerImpl) loadFromLoadedAssetContainer(container *loadedAssetContainer, alreadyLoadedAsset Asset) (Asset, error) {
 
 	assetDescriptor, ok := assetManager.AssetDescriptors[container.Type]
 	if !ok {
@@ -66,7 +84,7 @@ func (a *assetManagerImpl) LoadWithOptions(assetPath Path, options LoadOptions) 
 	}
 
 	var anyInner any
-	err = json.Unmarshal(container.Inner, &anyInner)
+	err := json.Unmarshal(container.Inner, &anyInner)
 	if err != nil {
 		return nil, err
 	}
@@ -82,11 +100,7 @@ func (a *assetManagerImpl) LoadWithOptions(assetPath Path, options LoadOptions) 
 	if postLoad, ok := assetToLoadInto.(PostLoadingAsset); ok {
 		postLoad.PostLoad()
 	}
-	if err == nil {
-		// save the references to these assets to prevent future loading
-		a.AssetToLoadPath[assetToLoadInto] = assetPath
-		a.LoadPathToAsset[assetPath] = assetToLoadInto
-	}
+
 	return assetToLoadInto, err
 }
 
@@ -113,8 +127,7 @@ func (a *assetManagerImpl) unmarshalFromValues(source reflect.Value, dest reflec
 		//fmt.Println("Handle interface (fallthrough to pointer)")
 		fallthrough
 	case reflect.Pointer:
-		//fmt.Println("Handle ptr")
-		// There will be a serialized assetLoadPath in data
+		// There will be a serialized assetLoadPath in data, or a savedAssetContainer
 		if !source.IsValid() {
 			return fmt.Errorf("attempt to load pointer, but not valid")
 		}
@@ -125,14 +138,30 @@ func (a *assetManagerImpl) unmarshalFromValues(source reflect.Value, dest reflec
 		if !ok {
 			return fmt.Errorf("unable to cast %v to map[string]any", source)
 		}
-		path := loadPathInfo["Path"].(string)
-		asset, err := a.Load(Path(path))
-		//fmt.Printf("Disk link %#v\n", data)
-		//fmt.Printf("asset %#v\n", asset)
-		if err != nil {
-			return fmt.Errorf("unable to load asset at path %s", path)
+
+		if pathAny, ok := loadPathInfo["Path"]; ok {
+			// This is a saved reference to another asset
+			path := pathAny.(string)
+			asset, err := a.Load(Path(path))
+			if err != nil {
+				return fmt.Errorf("unable to load asset at path %s", path)
+			}
+			dest.Set(reflect.ValueOf(asset))
+			return nil
 		}
-		dest.Set(reflect.ValueOf(asset))
+
+		if _, ok := loadPathInfo["Type"]; ok {
+			d, _ := json.Marshal(source.Interface())
+			var container loadedAssetContainer
+			json.Unmarshal(d, &container)
+			inlineAsset, err := a.loadFromLoadedAssetContainer(&container, nil)
+			if err != nil {
+				return fmt.Errorf("unable to load inline asset")
+			}
+			dest.Set(reflect.ValueOf(inlineAsset))
+			return nil
+		}
+		panic("Should not get here")
 
 	case reflect.Struct:
 		for i := 0; i < t.NumField(); i++ {

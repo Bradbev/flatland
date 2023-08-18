@@ -15,6 +15,7 @@ information hiding/abstraction against reflection?
 # Next Goal
 - Tree view widget
 - Tree view of components
+- Multiple tags on the struct
 - Allow inline saving of assets that have parents
  - ie, components have a parent and the actor an override fields
 - Create a tiny game that does not include the editor package, but does load the created asset

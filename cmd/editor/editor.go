@@ -33,7 +33,7 @@ func main() {
 		ed: editor.New("./content", mgr),
 	}
 
-	asset.RegisterAsset(asset.EditTest{})
+	asset.RegisterAsset(EditTest{})
 	flat.RegisterAllFlatTypes()
 	editors.RegisterAllFlatEditors(gg.ed)
 
@@ -109,10 +109,10 @@ type EditTest struct {
 	SupportNestedCustomEditors flat.Image
 }
 
-var defaultTestObject = asset.EditTest{
+var defaultTestObject = EditTest{
 	Slice: []int{7, 4, 5, 6},
 }
-var defaultTestObjectChild = asset.EditTest{}
+var defaultTestObjectChild = EditTest{}
 
 // eventually this struct will vanish and the whole loop
 // will live in the editor

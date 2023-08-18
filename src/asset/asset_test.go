@@ -391,3 +391,63 @@ func TestParentLoadingSavingSetting(t *testing.T) {
 	}
 
 }
+
+type inlineInnerSaveStruct struct {
+	ItemA string
+	ItemB string
+}
+
+type inlineSaving struct {
+	WillNotSave *inlineInnerSaveStruct
+	SaveInline  *inlineInnerSaveStruct `flat:"inline"`
+}
+
+func TestInlineAssetSaving(t *testing.T) {
+	rootFS := newWriteFS()
+	reset := func() {
+		asset.Reset()
+		asset.RegisterFileSystem(rootFS.fs, 0)
+		asset.RegisterWritableFileSystem(rootFS)
+		asset.RegisterAsset(inlineInnerSaveStruct{})
+		asset.RegisterAsset(inlineSaving{})
+	}
+	reset()
+
+	parent := &inlineInnerSaveStruct{"ParentA", "ParentB"}
+	asset.Save("parent.json", parent)
+
+	toSave := &inlineSaving{
+		WillNotSave: &inlineInnerSaveStruct{"ignoreA", "ignoreB"},
+		SaveInline:  &inlineInnerSaveStruct{"InlineA", "ParentB"},
+	}
+
+	asset.SetParent(toSave.SaveInline, parent)
+
+	err := asset.Save("inlined.json", toSave)
+	assert.NoError(t, err)
+
+	reset()
+
+	loaded, err := asset.Load("inlined.json")
+	assert.NoError(t, err)
+	expected := &inlineSaving{
+		SaveInline: &inlineInnerSaveStruct{"InlineA", "ParentB"},
+	}
+	assert.Equal(t, expected, loaded)
+
+	exactFileContent := `{
+  "Type": "github.com/bradbev/flatland/src/asset_test.inlineSaving",
+  "Parent": "",
+  "Inner": {
+    "SaveInline": {
+      "Type": "github.com/bradbev/flatland/src/asset_test.inlineInnerSaveStruct",
+      "Parent": "parent.json",
+      "Inner": {
+        "ItemA": "InlineA"
+      }
+    }
+  }
+}`
+	data, err := fs.ReadFile(rootFS.fs, "inlined.json")
+	assert.Equal(t, exactFileContent, string(data), "The inlined field has a parent etc")
+}

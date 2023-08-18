@@ -9,8 +9,33 @@ import (
 )
 
 func (a *assetManagerImpl) Save(path Path, toSave Asset) error {
+	container, err := a.makeSavedAssetContainer(toSave)
+	if err != nil {
+		return err
+	}
+	data, err := json.MarshalIndent(container, "", "  ")
+	if err != nil {
+		return err
+	}
+
+	if !strings.HasSuffix(string(path), ".json") {
+		path = path + ".json"
+	}
+	err = assetManager.WriteFS.WriteFile(path, data)
+
+	if err != nil {
+		return err
+	}
+	a.AssetToLoadPath[toSave] = path
+	a.LoadPathToAsset[path] = toSave
+
+	a.reloadChildAssets(path)
+	return nil
+}
+
+func (a *assetManagerImpl) makeSavedAssetContainer(toSave Asset) (*savedAssetContainer, error) {
 	if assetManager.WriteFS == nil {
-		return fmt.Errorf("Can't Save asset - no writable FS")
+		return nil, fmt.Errorf("Can't Save asset - no writable FS")
 	}
 	// toSave must be a pointer, but the top level needs to be
 	// saved as a struct
@@ -26,7 +51,7 @@ func (a *assetManagerImpl) Save(path Path, toSave Asset) error {
 	if parentPath, ok := a.ChildToParent[toSave]; ok {
 		parent, err := a.Load(parentPath)
 		if err != nil {
-			return err
+			return nil, err
 		}
 		if parent != nil {
 			parentConcrete := reflect.ValueOf(parent).Elem().Interface()
@@ -37,7 +62,7 @@ func (a *assetManagerImpl) Save(path Path, toSave Asset) error {
 	diffsFromParent := findDiffsFromParentJson(parentJson, fixedRefs)
 	_, fullname := ObjectTypeName(toSave)
 	if _, ok := a.AssetDescriptors[fullname]; !ok {
-		return fmt.Errorf("Type %s is not registered with the asset system", fullname)
+		return nil, fmt.Errorf("Type %s is not registered with the asset system", fullname)
 	}
 
 	container := savedAssetContainer{
@@ -45,23 +70,8 @@ func (a *assetManagerImpl) Save(path Path, toSave Asset) error {
 		Inner:  diffsFromParent,
 		Parent: a.ChildToParent[toSave],
 	}
-	data, err := json.MarshalIndent(container, "", "  ")
-	if err != nil {
-		return err
-	}
-	if !strings.HasSuffix(string(path), ".json") {
-		path = path + ".json"
-	}
-	err = assetManager.WriteFS.WriteFile(path, data)
 
-	if err != nil {
-		return err
-	}
-	a.AssetToLoadPath[toSave] = path
-	a.LoadPathToAsset[path] = toSave
-
-	a.reloadChildAssets(path)
-	return nil
+	return &container, nil
 }
 
 func (a *assetManagerImpl) reloadChildAssets(path Path) {
@@ -78,19 +88,57 @@ type assetLoadPath struct {
 	Path Path
 }
 
+type buildJsonContext struct {
+	stack []*reflect.StructField
+}
+
+func (b *buildJsonContext) Push(sf *reflect.StructField) {
+	b.stack = append(b.stack, sf)
+}
+
+func (b *buildJsonContext) Pop() {
+	b.stack = b.stack[:len(b.stack)-1]
+}
+
+func (b *buildJsonContext) Peek() *reflect.StructField {
+	if len(b.stack) > 0 {
+		return b.stack[len(b.stack)-1]
+	}
+	return nil
+}
+
 func (a *assetManagerImpl) buildJsonToSave(obj any) any {
+	return a.buildJsonToSaveInternal(obj, &buildJsonContext{})
+}
+
+func (a *assetManagerImpl) buildJsonToSaveInternal(obj any, context *buildJsonContext) any {
 	if obj == nil {
 		return nil
 	}
 	t := reflect.TypeOf(obj)
 	switch t.Kind() {
 	case reflect.Pointer:
-		_, fullname := ObjectTypeName(obj)
-		path := a.AssetToLoadPath[obj]
-		return assetLoadPath{
-			Type: fullname,
-			Path: path,
+		if sf := context.Peek(); sf != nil {
+			tag := sf.Tag.Get("flat")
+			fmt.Println(tag)
+			if tag == "inline" {
+				container, err := a.makeSavedAssetContainer(obj)
+				if err != nil {
+					panic(err)
+				}
+				return container
+				//return a.buildJsonToSaveInternal(v, context)
+			}
 		}
+		// save references to known assets
+		if path, ok := a.AssetToLoadPath[obj]; ok {
+			_, fullname := ObjectTypeName(obj)
+			return assetLoadPath{
+				Type: fullname,
+				Path: path,
+			}
+		}
+		return nil
 	case reflect.Struct:
 		m := map[string]any{}
 		v := reflect.ValueOf(obj)
@@ -100,7 +148,9 @@ func (a *assetManagerImpl) buildJsonToSave(obj any) any {
 				continue
 			}
 			field := v.Field(i)
-			m[structField.Name] = a.buildJsonToSave(field.Interface())
+			context.Push(&structField)
+			m[structField.Name] = a.buildJsonToSaveInternal(field.Interface(), context)
+			context.Pop()
 		}
 		return m
 	case reflect.Slice:
@@ -115,7 +165,7 @@ func (a *assetManagerImpl) buildJsonToSave(obj any) any {
 			s := make([]any, v.Len())
 			for i := 0; i < v.Len(); i++ {
 				index := v.Index(i)
-				s[i] = a.buildJsonToSave(index.Interface())
+				s[i] = a.buildJsonToSaveInternal(index.Interface(), context)
 			}
 			return s
 		}

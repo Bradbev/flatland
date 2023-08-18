@@ -23,7 +23,7 @@ func (a *assetManagerImpl) Save(path Path, toSave Asset) error {
 	fixedRefs := a.buildJsonToSave(structToSave.Interface())
 
 	var parentJson any
-	if parentPath, ok := a.ChildToParent[path]; ok {
+	if parentPath, ok := a.ChildToParent[toSave]; ok {
 		parent, err := a.Load(parentPath)
 		if err != nil {
 			return err
@@ -43,7 +43,7 @@ func (a *assetManagerImpl) Save(path Path, toSave Asset) error {
 	container := savedAssetContainer{
 		Type:   fullname,
 		Inner:  diffsFromParent,
-		Parent: a.ChildToParent[path],
+		Parent: a.ChildToParent[toSave],
 	}
 	data, err := json.MarshalIndent(container, "", "  ")
 	if err != nil {

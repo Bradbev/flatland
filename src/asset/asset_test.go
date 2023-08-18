@@ -365,14 +365,16 @@ func TestParentLoading(t *testing.T) {
 
 		parent.StrB = "ParentNewB"
 		child.StrA = "ChildA"
-		err = asset.SetParent(loadedChild, loadedParent)
+		err = asset.SetParent(child, parent)
 		assert.NoError(t, err)
-		// TODO
 		assert.Equal(t, &testAssetParent{"ChildA", "ParentNewB"}, child, "Setting the parent will immediately fix the child")
 		asset.Save("child.json", child)
 
-		d, _ := fs.ReadFile(rootFS.fs, "child.json")
-		fmt.Println(string(d))
+		parent.StrB = "ThirdB"
+		loadedAgain, err := asset.LoadWithOptions("child.json", asset.LoadOptions{ForceReload: true})
+		assert.NoError(t, err)
+		assert.Equal(t, loadedChild, loadedAgain, "The already loaded asset is returned")
+		assert.Equal(t, &testAssetParent{"ChildA", "ThirdB"}, child, "The asset is modified in place")
 	}
 
 	reset()

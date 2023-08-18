@@ -93,6 +93,16 @@ func ReadFile(assetPath Path) ([]byte, error) {
 	return assetManager.ReadFile(assetPath)
 }
 
+type LoadOptions struct {
+	// ForceReload will reload the asset from disk.  If the asset already
+	// exists in memory that same object will be reused.
+	ForceReload bool
+}
+
+func LoadWithOptions(assetPath Path, options LoadOptions) (Asset, error) {
+	return assetManager.LoadWithOptions(assetPath, options)
+}
+
 func Load(assetPath Path) (Asset, error) {
 	return assetManager.Load(assetPath)
 }
@@ -168,7 +178,7 @@ type assetManagerImpl struct {
 	LoadPathToAsset map[Path]Asset
 
 	// ChildToParent maps a child asset to its parent
-	ChildToParent map[Path]Path
+	ChildToParent map[Asset]Path
 }
 
 type fsWrapper struct {
@@ -184,7 +194,7 @@ func newAssetManagerImpl() *assetManagerImpl {
 		AssetDescriptors: map[string]*AssetDescriptor{},
 		AssetToLoadPath:  map[Asset]Path{},
 		LoadPathToAsset:  map[Path]Asset{},
-		ChildToParent:    map[Path]Path{},
+		ChildToParent:    map[Asset]Path{},
 	}
 }
 
@@ -243,18 +253,16 @@ func (a *assetManagerImpl) RegisterAssetFactory(zeroAsset any, factoryFunction F
 	})
 }
 
+// SetParent is used to set the parent of an Asset and also update
+// the child with new parent defaults.
 func (a *assetManagerImpl) SetParent(child Asset, parent Asset) error {
 	parentPath, ok := a.AssetToLoadPath[parent]
 	if !ok {
 		return fmt.Errorf("parent is not a loaded asset %v", parent)
 	}
-	childPath, ok := a.AssetToLoadPath[child]
-	if !ok {
-		return fmt.Errorf("child is not a loaded asset %v", child)
-	}
 	// To set a new parent we need to find the diffs between the old parent and the child
 	var oldParent any
-	if oldParentPath, ok := a.ChildToParent[childPath]; ok {
+	if oldParentPath, ok := a.ChildToParent[child]; ok {
 		var err error
 		oldParent, err = a.Load(oldParentPath)
 		if err != nil {
@@ -262,7 +270,7 @@ func (a *assetManagerImpl) SetParent(child Asset, parent Asset) error {
 		}
 	}
 
-	a.ChildToParent[childPath] = parentPath
+	a.ChildToParent[child] = parentPath
 
 	// find diffs between the old parent and the child
 	diffs := a.findDiffsFromParent(oldParent, child)

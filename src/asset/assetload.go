@@ -10,9 +10,14 @@ import (
 )
 
 func (a *assetManagerImpl) Load(assetPath Path) (Asset, error) {
-	// Never load an asset twice
-	if asset, loaded := a.LoadPathToAsset[assetPath]; loaded {
-		return asset, nil
+	return a.LoadWithOptions(assetPath, LoadOptions{})
+}
+
+func (a *assetManagerImpl) LoadWithOptions(assetPath Path, options LoadOptions) (Asset, error) {
+	// If we are able, don't reload an existing asset
+	alreadyLoadedAsset, loaded := a.LoadPathToAsset[assetPath]
+	if loaded && !options.ForceReload {
+		return alreadyLoadedAsset, nil
 	}
 
 	data, err := assetManager.ReadFile(assetPath)
@@ -28,12 +33,17 @@ func (a *assetManagerImpl) Load(assetPath Path) (Asset, error) {
 	if !ok {
 		return nil, fmt.Errorf("Unknown asset '%s' - is type registered?", container.Type)
 	}
-	obj, err := assetDescriptor.Create()
-	if err != nil {
-		return nil, err
+
+	assetToLoadInto := alreadyLoadedAsset
+	if assetToLoadInto == nil {
+		var err error
+		assetToLoadInto, err = assetDescriptor.Create()
+		if err != nil {
+			return nil, err
+		}
 	}
 
-	_, TType := ObjectTypeName(obj)
+	_, TType := ObjectTypeName(assetToLoadInto)
 	//println("TType ", TType)
 	if TType != container.Type {
 		return nil, fmt.Errorf("Load type mismatch.  Wanted %s, loaded %s", TType, container.Type)
@@ -45,7 +55,8 @@ func (a *assetManagerImpl) Load(assetPath Path) (Asset, error) {
 		if err != nil {
 			return nil, err
 		}
-		copier.Copy(obj, parent)
+		copier.Copy(assetToLoadInto, parent)
+		a.ChildToParent[assetToLoadInto] = container.Parent
 	}
 
 	var anyInner any
@@ -56,21 +67,21 @@ func (a *assetManagerImpl) Load(assetPath Path) (Asset, error) {
 
 	// anyInner can be nil - it means the whole object is default/inherited
 	if anyInner != nil {
-		err = a.unmarshalFromAny(anyInner, obj)
+		err = a.unmarshalFromAny(anyInner, assetToLoadInto)
 		if err != nil {
 			return nil, err
 		}
 	}
 	//fmt.Printf("%v %#v\n", reflect.TypeOf(obj).Name(), obj)
-	if postLoad, ok := obj.(PostLoadingAsset); ok {
+	if postLoad, ok := assetToLoadInto.(PostLoadingAsset); ok {
 		postLoad.PostLoad()
 	}
 	if err == nil {
 		// save the references to these assets to prevent future loading
-		a.AssetToLoadPath[obj] = assetPath
-		a.LoadPathToAsset[assetPath] = obj
+		a.AssetToLoadPath[assetToLoadInto] = assetPath
+		a.LoadPathToAsset[assetPath] = assetToLoadInto
 	}
-	return obj, err
+	return assetToLoadInto, err
 }
 
 func (a *assetManagerImpl) unmarshalFromAny(data any, v any) error {
@@ -86,8 +97,6 @@ func safeLen(value reflect.Value) int {
 	}
 	return value.Len()
 }
-
-//var assetType = reflect.ValueOf(new(Asset)).Elem().Type()
 
 func (a *assetManagerImpl) unmarshalFromValues(source reflect.Value, dest reflect.Value) error {
 	//fmt.Printf("source:%#v \nsettable? %v \nkind %s\n", source, source.CanSet(), source.Kind())
@@ -182,17 +191,4 @@ func (a *assetManagerImpl) unmarshalFromValues(source reflect.Value, dest reflec
 	}
 
 	return nil
-}
-
-// makePristineManager creates a brand new assetManager and sets it up
-// for read-only access to the same data as the existing manager.
-// Used to force-load an asset from disk (eg, to compare an unsaved asset)
-// BEWARE - this call shares some maps, do not mutate the maps!
-func (a *assetManagerImpl) makePristineManager() *assetManagerImpl {
-	clean := newAssetManagerImpl()
-	clean.FileSystems = a.FileSystems
-	clean.AssetDescriptors = a.AssetDescriptors
-	clean.AssetDescriptorList = a.AssetDescriptorList
-	clean.ChildToParent = a.ChildToParent
-	return clean
 }

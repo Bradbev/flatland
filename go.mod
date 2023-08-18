@@ -25,6 +25,7 @@ require (
 	github.com/davecgh/go-spew v1.1.1 // indirect
 	github.com/deeean/go-vector v1.1.0
 	github.com/gabstv/ebiten-imgui v0.5.0
+	github.com/jinzhu/copier v0.3.5
 	github.com/pmezard/go-difflib v1.0.0 // indirect
 	github.com/psanford/memfs v0.0.0-20230130182539-4dbf7e3e865e
 	golang.org/x/exp v0.0.0-20230713183714-613f0c0eb8a1

@@ -8,11 +8,6 @@ import (
 	"strings"
 )
 
-type saveableAssetContainer struct {
-	Type  string
-	Inner interface{}
-}
-
 func (a *assetManagerImpl) Save(path Path, toSave Asset) error {
 	if assetManager.WriteFS == nil {
 		return fmt.Errorf("Can't Save asset - no writable FS")
@@ -25,12 +20,30 @@ func (a *assetManagerImpl) Save(path Path, toSave Asset) error {
 
 	// go from the pointer to the real struct
 	structToSave := reflect.ValueOf(toSave).Elem()
-
 	fixedRefs := a.buildJsonToSave(structToSave.Interface())
+
+	var parentJson any
+	if parentPath, ok := a.ChildToParent[path]; ok {
+		parent, err := a.Load(parentPath)
+		if err != nil {
+			return err
+		}
+		if parent != nil {
+			parentConcrete := reflect.ValueOf(parent).Elem().Interface()
+			parentJson = a.buildJsonToSave(parentConcrete)
+		}
+	}
+
+	diffsFromParent := findDiffsFromParentJson(parentJson, fixedRefs)
 	_, fullname := ObjectTypeName(toSave)
-	container := saveableAssetContainer{
-		Type:  fullname,
-		Inner: fixedRefs,
+	if _, ok := a.AssetDescriptors[fullname]; !ok {
+		return fmt.Errorf("Type %s is not registered with the asset system", fullname)
+	}
+
+	container := savedAssetContainer{
+		Type:   fullname,
+		Inner:  diffsFromParent,
+		Parent: a.ChildToParent[path],
 	}
 	data, err := json.MarshalIndent(container, "", "  ")
 	if err != nil {
@@ -70,12 +83,14 @@ func (a *assetManagerImpl) buildJsonToSave(obj any) any {
 		}
 	case reflect.Struct:
 		m := map[string]any{}
+		v := reflect.ValueOf(obj)
 		for i := 0; i < t.NumField(); i++ {
-			field := t.Field(i)
-			if !field.IsExported() {
+			structField := t.Field(i)
+			if !structField.IsExported() { // ignore unexported fields
 				continue
 			}
-			m[field.Name] = a.buildJsonToSave(reflect.ValueOf(obj).Field(i).Interface())
+			field := v.Field(i)
+			m[structField.Name] = a.buildJsonToSave(field.Interface())
 		}
 		return m
 	case reflect.Slice:
@@ -97,4 +112,106 @@ func (a *assetManagerImpl) buildJsonToSave(obj any) any {
 	default:
 		return obj
 	}
+}
+
+func jsp(pref string, o any) {
+	fmt.Println(pref)
+	fmt.Printf("%#v\n", o)
+}
+
+func (a *assetManagerImpl) findDiffsFromParent(parent, child any) any {
+	if child == nil {
+		return nil
+	}
+	var parentJson any
+	if parent != nil {
+		parentConcrete := reflect.ValueOf(parent).Elem().Interface()
+		parentJson = a.buildJsonToSave(parentConcrete)
+	}
+	childConcrete := reflect.ValueOf(child).Elem().Interface()
+	childJson := a.buildJsonToSave(childConcrete)
+	return findDiffsFromParentJson(parentJson, childJson)
+}
+
+// findDiffsFromParentJson expects to revceive output from buildJsonToSave
+// ie, all structs have been converted to maps.  The input objects are
+// compared recursively.  If parent and child are the same, then nil is
+// returned.
+// Maps recursively apply this function to each key.
+// The results is a map that contains only key/value pairs where the child
+// is different from the Parent.  In the degenerate case, a copy of child will
+// be returned.
+func findDiffsFromParentJson(parent, child any) any {
+	//jsp("Parent ----", parent)
+	//jsp("Child ----", child)
+
+	childType := reflect.TypeOf(child)
+	parentValue := reflect.ValueOf(parent)
+	childValue := reflect.ValueOf(child)
+	if parent != nil {
+		parentType := reflect.TypeOf(parent)
+		if parentType != childType {
+			// types differ, keep the child (unless it's the zero value)
+			if childValue.IsZero() {
+				return nil
+			}
+			return child
+		}
+		if !parentValue.IsZero() && childValue.IsZero() {
+			// if the parent is not Zero, but the child is, the zero
+			// value needs to be serialized.
+			return child
+		}
+	}
+	if childValue.IsZero() {
+		return nil
+	}
+
+	switch childType.Kind() {
+	default:
+		if parent == child {
+			return nil
+		}
+	case reflect.Slice, reflect.Array:
+		if childValue.IsZero() || childValue.IsNil() || childValue.Len() == 0 {
+			return nil
+		}
+		if parent == nil || childValue.Len() != parentValue.Len() {
+			return child
+		}
+		for i := 0; i < childValue.Len(); i++ {
+			pv := parentValue.Index(i).Interface()
+			cv := childValue.Index(i).Interface()
+			diff := findDiffsFromParentJson(pv, cv)
+			if diff != nil {
+				return child
+			}
+		}
+		return nil
+
+	case reflect.Map:
+		ret := reflect.MakeMap(childType)
+		childIter := childValue.MapRange()
+		for childIter.Next() {
+			k, v := childIter.Key(), childIter.Value()
+			var parentMapValue any = nil
+			if parentValue.Kind() == reflect.Map {
+				if pmv := parentValue.MapIndex(k); pmv.IsValid() {
+					parentMapValue = pmv.Interface()
+				}
+			}
+
+			diffs := findDiffsFromParentJson(parentMapValue, v.Interface())
+			if diffs != nil {
+				ret.SetMapIndex(k, reflect.ValueOf(diffs))
+			}
+		}
+		if len(ret.MapKeys()) == 0 {
+			// if there are no keys, we found no diffs so can ignore this struct when saving the child
+			return nil
+		}
+		return ret.Interface()
+	}
+	// if we got to here without earlying out, safest to return the child
+	return child
 }

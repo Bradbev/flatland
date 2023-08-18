@@ -25,6 +25,7 @@ import (
 	"reflect"
 	"strings"
 
+	"github.com/jinzhu/copier"
 	"golang.org/x/exp/slices"
 )
 
@@ -100,6 +101,10 @@ func Save(path Path, toSave Asset) error {
 	return assetManager.Save(path, toSave)
 }
 
+func SetParent(child Asset, parent Asset) error {
+	return assetManager.SetParent(child, parent)
+}
+
 func LoadPathForAsset(a Asset) (Path, error) {
 	path, ok := assetManager.AssetToLoadPath[a]
 	if !ok {
@@ -134,9 +139,18 @@ func TypeName(t reflect.Type) (name string, fullname string) {
 	return t.Name(), t.PkgPath() + "." + t.Name()
 }
 
-type assetContainer struct {
-	Type  string
-	Inner json.RawMessage
+// loadedAssetContainer must be the same as savedAssetContainer, except for the type of Inner
+type loadedAssetContainer struct {
+	Type   string
+	Parent Path
+	Inner  json.RawMessage
+}
+
+// savedAssetContainer must be the same as loadedAssetContainer, except for the type of Inner
+type savedAssetContainer struct {
+	Type   string
+	Parent Path
+	Inner  interface{}
 }
 
 type assetManagerImpl struct {
@@ -152,6 +166,9 @@ type assetManagerImpl struct {
 
 	// Maps a Path to an already loaded asset
 	LoadPathToAsset map[Path]Asset
+
+	// ChildToParent maps a child asset to its parent
+	ChildToParent map[Path]Path
 }
 
 type fsWrapper struct {
@@ -167,6 +184,7 @@ func newAssetManagerImpl() *assetManagerImpl {
 		AssetDescriptors: map[string]*AssetDescriptor{},
 		AssetToLoadPath:  map[Asset]Path{},
 		LoadPathToAsset:  map[Path]Asset{},
+		ChildToParent:    map[Path]Path{},
 	}
 }
 
@@ -223,4 +241,40 @@ func (a *assetManagerImpl) RegisterAssetFactory(zeroAsset any, factoryFunction F
 	slices.SortFunc(a.AssetDescriptorList, func(a, b *AssetDescriptor) bool {
 		return strings.Compare(a.Name, b.Name) == -1
 	})
+}
+
+func (a *assetManagerImpl) SetParent(child Asset, parent Asset) error {
+	parentPath, ok := a.AssetToLoadPath[parent]
+	if !ok {
+		return fmt.Errorf("parent is not a loaded asset %v", parent)
+	}
+	childPath, ok := a.AssetToLoadPath[child]
+	if !ok {
+		return fmt.Errorf("child is not a loaded asset %v", child)
+	}
+	// To set a new parent we need to find the diffs between the old parent and the child
+	var oldParent any
+	if oldParentPath, ok := a.ChildToParent[childPath]; ok {
+		var err error
+		oldParent, err = a.Load(oldParentPath)
+		if err != nil {
+			return err
+		}
+	}
+
+	a.ChildToParent[childPath] = parentPath
+
+	// find diffs between the old parent and the child
+	diffs := a.findDiffsFromParent(oldParent, child)
+
+	// copy the new parent values into the child
+	copier.Copy(child, parent)
+	b, err := json.Marshal(diffs)
+	if err != nil {
+		return err
+	}
+	// unmarshal the diffs into the child
+	json.Unmarshal(b, child)
+
+	return err
 }

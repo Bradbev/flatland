@@ -5,9 +5,12 @@ import (
 	"encoding/json"
 	"fmt"
 	"reflect"
+
+	"github.com/jinzhu/copier"
 )
 
 func (a *assetManagerImpl) Load(assetPath Path) (Asset, error) {
+	// Never load an asset twice
 	if asset, loaded := a.LoadPathToAsset[assetPath]; loaded {
 		return asset, nil
 	}
@@ -17,7 +20,8 @@ func (a *assetManagerImpl) Load(assetPath Path) (Asset, error) {
 		return nil, err
 	}
 
-	container := assetContainer{}
+	// load the generic format and validate things
+	container := loadedAssetContainer{}
 	err = json.Unmarshal(data, &container)
 
 	assetDescriptor, ok := assetManager.AssetDescriptors[container.Type]
@@ -25,7 +29,6 @@ func (a *assetManagerImpl) Load(assetPath Path) (Asset, error) {
 		return nil, fmt.Errorf("Unknown asset '%s' - is type registered?", container.Type)
 	}
 	obj, err := assetDescriptor.Create()
-
 	if err != nil {
 		return nil, err
 	}
@@ -36,15 +39,27 @@ func (a *assetManagerImpl) Load(assetPath Path) (Asset, error) {
 		return nil, fmt.Errorf("Load type mismatch.  Wanted %s, loaded %s", TType, container.Type)
 	}
 
+	// load the parent (if it has one) and copy it into the child
+	if container.Parent != "" {
+		parent, err := a.Load(container.Parent)
+		if err != nil {
+			return nil, err
+		}
+		copier.Copy(obj, parent)
+	}
+
 	var anyInner any
 	err = json.Unmarshal(container.Inner, &anyInner)
 	if err != nil {
 		return nil, err
 	}
 
-	err = a.unmarshalFromAny(anyInner, obj)
-	if err != nil {
-		return nil, err
+	// anyInner can be nil - it means the whole object is default/inherited
+	if anyInner != nil {
+		err = a.unmarshalFromAny(anyInner, obj)
+		if err != nil {
+			return nil, err
+		}
 	}
 	//fmt.Printf("%v %#v\n", reflect.TypeOf(obj).Name(), obj)
 	if postLoad, ok := obj.(PostLoadingAsset); ok {
@@ -75,8 +90,8 @@ func safeLen(value reflect.Value) int {
 //var assetType = reflect.ValueOf(new(Asset)).Elem().Type()
 
 func (a *assetManagerImpl) unmarshalFromValues(source reflect.Value, dest reflect.Value) error {
-	fmt.Printf("source:%#v \nsettable? %v \nkind %s\n", source, source.CanSet(), source.Kind())
-	fmt.Printf("dest:%#v \nkind %s\n-----\n", dest, dest.Kind())
+	//fmt.Printf("source:%#v \nsettable? %v \nkind %s\n", source, source.CanSet(), source.Kind())
+	//fmt.Printf("dest:%#v \nkind %s\n-----\n", dest, dest.Kind())
 	t := dest.Type()
 	switch dest.Kind() {
 	case reflect.Interface:
@@ -167,4 +182,17 @@ func (a *assetManagerImpl) unmarshalFromValues(source reflect.Value, dest reflec
 	}
 
 	return nil
+}
+
+// makePristineManager creates a brand new assetManager and sets it up
+// for read-only access to the same data as the existing manager.
+// Used to force-load an asset from disk (eg, to compare an unsaved asset)
+// BEWARE - this call shares some maps, do not mutate the maps!
+func (a *assetManagerImpl) makePristineManager() *assetManagerImpl {
+	clean := newAssetManagerImpl()
+	clean.FileSystems = a.FileSystems
+	clean.AssetDescriptors = a.AssetDescriptors
+	clean.AssetDescriptorList = a.AssetDescriptorList
+	clean.ChildToParent = a.ChildToParent
+	return clean
 }

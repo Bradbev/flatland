@@ -93,7 +93,8 @@ func TestAssetSave(t *testing.T) {
 	assert.NoError(t, err)
 
 	expected := js{
-		"Type": "github.com/bradbev/flatland/src/asset_test.testAsset",
+		"Type":   "github.com/bradbev/flatland/src/asset_test.testAsset",
+		"Parent": "",
 		"Inner": js{
 			"Anykey": "saved",
 		},
@@ -183,6 +184,7 @@ func TestAssetSaveLinked(t *testing.T) {
 	expected :=
 		`{
   "Type": "github.com/bradbev/flatland/src/asset_test.testAssetNode",
+  "Parent": "",
   "Inner": {
     "Inline": {
       "SecondName": "inline"
@@ -200,6 +202,7 @@ func TestAssetSaveLinked(t *testing.T) {
 	leafExpected :=
 		`{
   "Type": "github.com/bradbev/flatland/src/asset_test.testAssetLeaf",
+  "Parent": "",
   "Inner": {
     "SecondName": "Leaf"
   }
@@ -320,4 +323,64 @@ func TestReflectCopy(t *testing.T) {
 
 	a.Foo = "bar"
 	assert.NotEqual(t, a, b.Interface())
+}
+
+type testAssetParent struct {
+	StrA string
+	StrB string
+}
+
+func TestParentLoading(t *testing.T) {
+	rootFS := newWriteFS()
+	reset := func() {
+		asset.Reset()
+		asset.RegisterFileSystem(rootFS.fs, 0)
+		asset.RegisterWritableFileSystem(rootFS)
+		asset.RegisterAsset(testAssetParent{})
+	}
+	reset()
+
+	{ // save to the FS
+		toSave := &testAssetParent{
+			StrA: "ParentA",
+			StrB: "ParentB",
+		}
+		err := asset.Save("parent.json", toSave)
+		assert.NoError(t, err)
+
+		err = asset.Save("child.json", &testAssetParent{})
+		assert.NoError(t, err)
+	}
+
+	{ // load them both
+		loadedParent, err := asset.Load("parent.json")
+		assert.NoError(t, err)
+		parent := loadedParent.(*testAssetParent)
+		assert.Equal(t, &testAssetParent{"ParentA", "ParentB"}, parent)
+
+		loadedChild, err := asset.Load("child.json")
+		assert.NoError(t, err)
+		child := loadedChild.(*testAssetParent)
+		assert.Equal(t, &testAssetParent{}, child)
+
+		parent.StrB = "ParentNewB"
+		child.StrA = "ChildA"
+		err = asset.SetParent(loadedChild, loadedParent)
+		assert.NoError(t, err)
+		// TODO
+		assert.Equal(t, &testAssetParent{"ChildA", "ParentNewB"}, child, "Setting the parent will immediately fix the child")
+		asset.Save("child.json", child)
+
+		d, _ := fs.ReadFile(rootFS.fs, "child.json")
+		fmt.Println(string(d))
+	}
+
+	reset()
+	{
+		loadedChild, err := asset.Load("child.json")
+		assert.NoError(t, err)
+		child := loadedChild.(*testAssetParent)
+		assert.Equal(t, &testAssetParent{"ChildA", "ParentB"}, child)
+	}
+
 }

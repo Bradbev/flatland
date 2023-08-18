@@ -42,39 +42,31 @@ func TestBuildJsonToSave(t *testing.T) {
 	}
 	a.AssetToLoadPath[&leaf] = "fullPath.json"
 	m := a.buildJsonToSave(node)
+	diffsFromParent := findDiffsFromParentJson(nil, m)
 
-	j, err := json.MarshalIndent(m, "", "")
+	j, err := json.MarshalIndent(diffsFromParent, "", "")
 	assert.NoError(t, err)
 
 	expected :=
 		`{
-"Array": [
-0,
-0
-],
 "AssetType": {
 "Type": "github.com/bradbev/flatland/src/asset.testLeaf",
 "Path": "fullPath.json"
 },
-"Flt": 0,
 "Inline": {
 "Leaf": "Inline"
 },
-"MissingValue": 0,
 "Name": "Node",
-"Num": 0,
 "Ref": {
 "Type": "github.com/bradbev/flatland/src/asset.testLeaf",
 "Path": "fullPath.json"
 },
-"Slice": [],
 "SliceOfIface": [
 {
 "Type": "github.com/bradbev/flatland/src/asset.testLeaf",
 "Path": "fullPath.json"
 }
-],
-"Small": 0
+]
 }`
 
 	assert.Equal(t, expected, string(j))
@@ -118,6 +110,7 @@ func TestUnmashallFromAny(t *testing.T) {
 
 	var node testNode
 	func() {
+		// the recover is here because this is a PITA to debug
 		defer func() {
 			a := recover()
 			if a != nil {
@@ -129,7 +122,6 @@ func TestUnmashallFromAny(t *testing.T) {
 		a.unmarshalFromAny(toUnmarshal, &node)
 
 	}()
-	fmt.Printf("---- NODE\n  %v\n", js(node))
 
 	assert.Equal(t, &leaf, node.Ref, "Expected node.Ref to equal leaf")
 
@@ -145,4 +137,68 @@ func TestUnmashallFromAny(t *testing.T) {
 		AssetType: &testLeaf{Leaf: "RefLeaf"}, // NOTE, Equal tests the values, not the pointer addresses
 	}
 	assert.Equal(t, expected, node)
+}
+
+type parentInner struct {
+	PInnerA string
+	PInnerB string
+}
+
+type parent struct {
+	StrA  string
+	StrB  string
+	Inner parentInner
+	Slice []int
+}
+
+type jsmap = map[string]any
+
+func TestFindDiffsFromParent(t *testing.T) {
+	assetman := &assetManagerImpl{}
+	fd := func(a, b any) any {
+		r := findDiffsFromParentJson(
+			assetman.buildJsonToSave(a),
+			assetman.buildJsonToSave(b))
+		//jsp("Return::::::", r)
+		return r
+	}
+
+	{ // basics
+		assert.Equal(t, 1, fd("parent", 1))
+		assert.Equal(t, nil, fd("parent", "parent"))
+		assert.Equal(t, "child", fd("parent", "child"))
+	}
+
+	{ // structs with nesting
+		p := parent{StrA: "Foo", StrB: "Bar",
+			Inner: parentInner{"PInnerA", "PInnerB"}}
+		c := parent{StrA: "Bar", StrB: "Bar",
+			Inner: parentInner{"child", "PInnerB"}}
+		expected := jsmap{"StrA": "Bar",
+			"Inner": jsmap{"PInnerA": "child"}}
+		assert.Equal(t, expected, fd(p, c), "Nested children need to replace parent values")
+	}
+
+	{ // structs with defaults
+		p := parent{StrA: "Foo", StrB: "Bar"}
+		c := parent{StrA: "", StrB: "Bar"}
+		expected := jsmap{"StrA": ""}
+		assert.Equal(t, expected, fd(p, c), "Child zero values can replace parent values")
+	}
+
+	{ // slices
+		p := parent{Slice: []int{}}
+		c := parent{Slice: []int{}}
+		assert.Nil(t, fd(p, c), "Empty slices shouldn't be saved")
+
+		p = parent{Slice: []int{1, 2}}
+		c = parent{Slice: []int{1, 2}}
+		assert.Nil(t, fd(p, c), "Same slices should be nil")
+
+		p = parent{Slice: []int{1, 2}}
+		c = parent{Slice: []int{1, 3}}
+		expected := jsmap{"Slice": []any{1, 3}}
+		assert.Equal(t, expected, fd(p, c), "Differing slices need to be saved")
+	}
+
 }

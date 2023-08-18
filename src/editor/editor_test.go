@@ -28,8 +28,6 @@ func TestImplements(t *testing.T) {
 	ta := reflect.TypeOf(&testActor{})
 	tye := ty.Elem()
 	p("%v\n", ta.Implements(tye))
-
-	t.Fail()
 }
 
 func TestTypeEditorBasicFuncCalled(t *testing.T) {

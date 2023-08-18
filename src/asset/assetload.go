@@ -49,14 +49,20 @@ func (a *assetManagerImpl) LoadWithOptions(assetPath Path, options LoadOptions) 
 		return nil, fmt.Errorf("Load type mismatch.  Wanted %s, loaded %s", TType, container.Type)
 	}
 
-	// load the parent (if it has one) and copy it into the child
-	if container.Parent != "" {
-		parent, err := a.Load(container.Parent)
-		if err != nil {
-			return nil, err
+	{ // copy the parent into the child
+		parentPath := container.Parent
+		if parentPath == "" {
+			parentPath = a.ChildToParent[assetToLoadInto]
 		}
-		copier.Copy(assetToLoadInto, parent)
-		a.ChildToParent[assetToLoadInto] = container.Parent
+		// load the parent (if it has one) and copy it into the child
+		if parentPath != "" {
+			parent, err := a.Load(parentPath)
+			if err != nil {
+				return nil, err
+			}
+			copier.CopyWithOption(assetToLoadInto, parent, copier.Option{DeepCopy: true})
+			a.ChildToParent[assetToLoadInto] = parentPath
+		}
 	}
 
 	var anyInner any

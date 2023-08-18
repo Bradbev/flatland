@@ -42,9 +42,7 @@ func (a *assetEditWindow) Draw() error {
 			}
 			imgui.SameLine()
 			if (imgui.Button("Refresh") || reload) && enabled {
-				if postloader, ok := a.target.(asset.PostLoadingAsset); ok {
-					postloader.PostLoad()
-				}
+				asset.LoadWithOptions(asset.Path(a.path), asset.LoadOptions{ForceReload: true})
 				if playable, ok := a.target.(flat.Playable); ok {
 					playable.BeginPlay()
 				}

@@ -276,7 +276,7 @@ func (a *assetManagerImpl) SetParent(child Asset, parent Asset) error {
 	diffs := a.findDiffsFromParent(oldParent, child)
 
 	// copy the new parent values into the child
-	copier.Copy(child, parent)
+	copier.CopyWithOption(child, parent, copier.Option{DeepCopy: true})
 	b, err := json.Marshal(diffs)
 	if err != nil {
 		return err

@@ -330,7 +330,7 @@ type testAssetParent struct {
 	StrB string
 }
 
-func TestParentLoading(t *testing.T) {
+func TestParentLoadingSavingSetting(t *testing.T) {
 	rootFS := newWriteFS()
 	reset := func() {
 		asset.Reset()
@@ -375,6 +375,11 @@ func TestParentLoading(t *testing.T) {
 		assert.NoError(t, err)
 		assert.Equal(t, loadedChild, loadedAgain, "The already loaded asset is returned")
 		assert.Equal(t, &testAssetParent{"ChildA", "ThirdB"}, child, "The asset is modified in place")
+
+		parent.StrB = "Fourth"
+		asset.Save("parent.json", parent)
+		assert.Equal(t, &testAssetParent{"ChildA", "Fourth"}, child, "Child assets are updated in memory when parents are saved")
+
 	}
 
 	reset()
@@ -382,7 +387,7 @@ func TestParentLoading(t *testing.T) {
 		loadedChild, err := asset.Load("child.json")
 		assert.NoError(t, err)
 		child := loadedChild.(*testAssetParent)
-		assert.Equal(t, &testAssetParent{"ChildA", "ParentB"}, child)
+		assert.Equal(t, &testAssetParent{"ChildA", "Fourth"}, child)
 	}
 
 }

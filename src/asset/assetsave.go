@@ -60,7 +60,17 @@ func (a *assetManagerImpl) Save(path Path, toSave Asset) error {
 	a.AssetToLoadPath[toSave] = path
 	a.LoadPathToAsset[path] = toSave
 
+	a.reloadChildAssets(path)
 	return nil
+}
+
+func (a *assetManagerImpl) reloadChildAssets(path Path) {
+	for childAsset, parentPath := range a.ChildToParent {
+		if path == parentPath {
+			childPath := a.AssetToLoadPath[childAsset]
+			a.LoadWithOptions(childPath, LoadOptions{ForceReload: true})
+		}
+	}
 }
 
 type assetLoadPath struct {
@@ -163,7 +173,8 @@ func findDiffsFromParentJson(parent, child any) any {
 			return child
 		}
 	}
-	if childValue.IsZero() {
+
+	if child == nil || childValue.IsZero() {
 		return nil
 	}
 
@@ -173,7 +184,11 @@ func findDiffsFromParentJson(parent, child any) any {
 			return nil
 		}
 	case reflect.Slice, reflect.Array:
-		if childValue.IsZero() || childValue.IsNil() || childValue.Len() == 0 {
+		if childValue.IsZero() || childValue.Len() == 0 {
+			return nil
+		}
+		// can't call IsNil on an array
+		if childType.Kind() == reflect.Slice && childValue.IsNil() {
 			return nil
 		}
 		if parent == nil || childValue.Len() != parentValue.Len() {

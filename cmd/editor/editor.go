@@ -33,7 +33,7 @@ func main() {
 		ed: editor.New("./content", mgr),
 	}
 
-	//asset.RegisterAsset(editTest{})
+	asset.RegisterAsset(asset.EditTest{})
 	flat.RegisterAllFlatTypes()
 	editors.RegisterAllFlatEditors(gg.ed)
 
@@ -43,14 +43,11 @@ func main() {
 	})
 
 	// load an asset to be edited by the test editor
-	a, err := asset.Load("apple-98.json")
-	fmt.Println(err)
-	defaultTestObject.AssetType = a
-	asset.Save("testobj.json", &defaultTestObject)
-	//gg.ed.EditAsset("testobj.json")
-
-	asset.Save("testactor.json", &defaultActorObject)
-	gg.ed.EditAsset("testactor.json")
+	asset.Save("testedit.json", &defaultTestObject)
+	gg.ed.EditAsset("testedit.json")
+	asset.Save("childedit.json", &defaultTestObjectChild)
+	asset.SetParent(&defaultTestObjectChild, &defaultTestObject)
+	gg.ed.EditAsset("childedit.json")
 
 	menu := edgui.Menu{
 		Name: "Custom Item",
@@ -84,9 +81,9 @@ type testInterfaceEditor interface {
 	TestTab()
 }
 
-// editTest demonstrates all the ways that the editor can
+// EditTest demonstrates all the ways that the editor can
 // edit types.
-type editTest struct {
+type EditTest struct {
 	AssetType   asset.Asset // support setting Assets
 	Flt         float32
 	Slice       []int
@@ -112,11 +109,10 @@ type editTest struct {
 	SupportNestedCustomEditors flat.Image
 }
 
-var defaultTestObject = editTest{
+var defaultTestObject = asset.EditTest{
 	Slice: []int{7, 4, 5, 6},
 }
-
-var defaultActorObject = actorTest{}
+var defaultTestObjectChild = asset.EditTest{}
 
 // eventually this struct will vanish and the whole loop
 // will live in the editor

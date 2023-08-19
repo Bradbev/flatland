@@ -1,0 +1,12 @@
+{
+  "Type": "main.EditTest",
+  "Parent": "",
+  "Inner": {
+    "Slice": [
+      7,
+      4,
+      5,
+      6
+    ]
+  }
+}

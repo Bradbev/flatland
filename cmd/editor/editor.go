@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"reflect"
 
+	"github.com/bradbev/flatland/cmd/editor/edtest"
 	"github.com/bradbev/flatland/src/asset"
 	"github.com/bradbev/flatland/src/editor"
 	"github.com/bradbev/flatland/src/editor/edgui"
@@ -28,10 +29,12 @@ func main() {
 	ebiten.SetWindowResizingMode(ebiten.WindowResizingModeEnabled)
 
 	gg := &G{
-		mgr: mgr,
-		//dscale: ebiten.DeviceScaleFactor(),
-		ed: editor.New("./content", mgr),
+		mgr:    mgr,
+		dscale: ebiten.DeviceScaleFactor(),
+		ed:     editor.New("./content", mgr),
 	}
+
+	edtest.TreeTestInit()
 
 	asset.RegisterAsset(EditTest{})
 	flat.RegisterAllFlatTypes()
@@ -43,11 +46,13 @@ func main() {
 	})
 
 	// load an asset to be edited by the test editor
-	asset.Save("testedit.json", &defaultTestObject)
-	gg.ed.EditAsset("testedit.json")
-	asset.Save("childedit.json", &defaultTestObjectChild)
-	asset.SetParent(&defaultTestObjectChild, &defaultTestObject)
-	gg.ed.EditAsset("childedit.json")
+	/*
+		asset.Save("testedit.json", &defaultTestObject)
+		gg.ed.EditAsset("testedit.json")
+		asset.Save("childedit.json", &defaultTestObjectChild)
+		asset.SetParent(&defaultTestObjectChild, &defaultTestObject)
+		gg.ed.EditAsset("childedit.json")
+	*/
 
 	menu := edgui.Menu{
 		Name: "Custom Item",
@@ -121,10 +126,18 @@ type G struct {
 	// demo members:
 	showDemoWindow bool
 	dscale         float64
-	retina         bool
 	w, h           int
+	showTestTree   bool
 
 	ed *editor.ImguiEditor
+}
+
+func (g *G) showTestControls() {
+	if imgui.Begin("Test Controls") {
+		imgui.Checkbox("ShowTestTree", &g.showTestTree)
+		imgui.Checkbox("ShowDemoWindow", &g.showDemoWindow)
+	}
+	imgui.End()
 }
 
 func (g *G) Draw(screen *ebiten.Image) {
@@ -141,8 +154,14 @@ func (g *G) Update() error {
 	g.mgr.BeginFrame()
 	{
 		g.ed.Update(updateRate)
+
+		g.showTestControls()
 		if g.showDemoWindow {
 			imgui.ShowDemoWindow(&g.showDemoWindow)
+		}
+
+		if g.showTestTree {
+			edtest.TreeTest()
 		}
 	}
 	g.mgr.EndFrame()
@@ -150,14 +169,8 @@ func (g *G) Update() error {
 }
 
 func (g *G) Layout(outsideWidth, outsideHeight int) (int, int) {
-	if g.retina {
-		m := ebiten.DeviceScaleFactor()
-		g.w = int(float64(outsideWidth) * m)
-		g.h = int(float64(outsideHeight) * m)
-	} else {
-		g.w = outsideWidth
-		g.h = outsideHeight
-	}
+	g.w = outsideWidth
+	g.h = outsideHeight
 	g.mgr.SetDisplaySize(float32(g.w), float32(g.h))
 	return g.w, g.h
 }

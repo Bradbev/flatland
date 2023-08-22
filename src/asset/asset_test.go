@@ -398,8 +398,9 @@ type inlineInnerSaveStruct struct {
 }
 
 type inlineSaving struct {
-	WillNotSave *inlineInnerSaveStruct
-	SaveInline  *inlineInnerSaveStruct `flat:"inline"`
+	WillNotSave         *inlineInnerSaveStruct
+	SaveInline          *inlineInnerSaveStruct `flat:"inline"`
+	SaveInterfaceInline any                    `flat:"inline"`
 }
 
 func TestInlineAssetSaving(t *testing.T) {
@@ -416,15 +417,21 @@ func TestInlineAssetSaving(t *testing.T) {
 	parent := &inlineInnerSaveStruct{"ParentA", "ParentB"}
 	asset.Save("parent.json", parent)
 
+	anyS := any(&inlineInnerSaveStruct{"IfaceA", "IfaceB"})
 	toSave := &inlineSaving{
-		WillNotSave: &inlineInnerSaveStruct{"ignoreA", "ignoreB"},
-		SaveInline:  &inlineInnerSaveStruct{"InlineA", "ParentB"},
+		WillNotSave:         &inlineInnerSaveStruct{"ignoreA", "ignoreB"},
+		SaveInline:          &inlineInnerSaveStruct{"InlineA", "ParentB"},
+		SaveInterfaceInline: anyS,
 	}
 
 	asset.SetParent(toSave.SaveInline, parent)
 
 	err := asset.Save("inlined.json", toSave)
 	assert.NoError(t, err)
+	{
+		data, _ := fs.ReadFile(rootFS.fs, "inlined.json")
+		fmt.Printf("%s\n", string(data))
+	}
 
 	reset()
 

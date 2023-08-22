@@ -55,6 +55,9 @@ type ImageComponent struct {
 var _ = Component((*ImageComponent)(nil))
 
 func (c *ImageComponent) BeginPlay() {
+	if c.Image == nil {
+		return
+	}
 	if c.Image.GetImage() != nil {
 		bounds := c.Image.GetImage().Bounds()
 		x, y := bounds.Dx(), bounds.Dy()
@@ -88,7 +91,7 @@ func ApplyTransform(transform Transform, geom *ebiten.GeoM) {
 func ApplyComponentTransforms(tr Transformer, geom *ebiten.GeoM) {
 	ApplyTransform(tr.GetTransform(), geom)
 	if comp, ok := tr.(Component); ok {
-		if owningTransformer, ok := comp.Owner().(Transformer); ok {
+		if owningTransformer, ok := comp.GetOwner().(Transformer); ok {
 			ApplyComponentTransforms(owningTransformer, geom)
 		}
 	}

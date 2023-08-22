@@ -70,3 +70,11 @@ changing the values inside an asset at runtime.
 > I need to provide a 'parenting' mechanism for assets so that most values can
 > be inherited from another asset. 
 
+
+# Parent Values for Assets
+Assets may take their default values from another Asset of the *same type*.  This allows for some basic reuse of data values, with the following rules.
+1. Assets in memory have the full set of data, there is no connection to their parent at runtime.  In other words, you can change parent values in memory and no already loaded child assets will change.
+2. Parent values are applied at Load time, using the values of the in-memory parent asset.  No extra reloading from disk is done.
+3. Assets are saved sparsely, only the fields that differ from their parent's field are saved.
+4. When an asset is loaded, the zero object for that asset is created, the parent object is copied into the child field by field and then the sparse save data is loaded into the child object.
+

@@ -35,4 +35,7 @@ func (s *Ship) Draw(screen *ebiten.Image) {
 	s.ActorBase.Draw(screen)
 	x, y := s.Transform.Location.X, s.Transform.Location.Y
 	ebitenutil.DebugPrintAt(screen, fmt.Sprintf("Ship at %v has ticked %v", s.Transform.Location, s.ticks), int(x), int(y))
+	if len(s.Components) > 0 {
+		ebitenutil.DebugPrintAt(screen, fmt.Sprintf("C0x %v", s.Components[0].GetTransform().Location.X), int(x), int(y+20))
+	}
 }

@@ -39,7 +39,7 @@ func (a *assetManagerImpl) LoadWithOptions(assetPath Path, options LoadOptions) 
 
 	if err == nil {
 		// save the references to these assets to prevent future loading
-		a.AssetToLoadPath[loaded] = assetPath
+		a.AssetToLoadPath[loadedAsset] = assetPath
 		a.LoadPathToAsset[assetPath] = loadedAsset
 	}
 	return loadedAsset, nil

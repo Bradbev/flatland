@@ -6,14 +6,17 @@ import (
 
 type Actor interface {
 	Transformer
+	Component
 	IsActor()
 }
 
 // Component
 type Component interface {
 	Transformer
-	SetOwner(owner any)
-	Owner() any
+	SetComponents([]Component)
+	GetComponents() []Component
+	SetOwner(owner Component)
+	GetOwner() Component
 }
 
 type Transformer interface {
@@ -34,48 +37,56 @@ type Playable interface {
 
 type ComponentBase struct {
 	Transform Transform
-	owner     any
+	Owner     Component
+	Children  []Component
 }
 
-func (c *ComponentBase) GetTransform() Transform {
-	return c.Transform
-}
+var _ Component = (*ComponentBase)(nil)
 
-func (c *ComponentBase) SetOwner(owner any) {
-	c.owner = owner
-}
-func (c *ComponentBase) Owner() any {
-	return c.owner
-}
+func (c *ComponentBase) SetOwner(owner Component)        { c.Owner = owner }
+func (c *ComponentBase) GetOwner() Component             { return c.Owner }
+func (c *ComponentBase) SetComponents(comps []Component) { c.Children = comps }
+func (c *ComponentBase) GetComponents() []Component      { return c.Children }
+func (c *ComponentBase) GetTransform() Transform         { return c.Transform }
 
 type ActorBase struct {
 	Transform          Transform
-	Components         []Component
+	Components         []Component `flat:"inline"`
 	tickableComponents []Tickable
 	drawableComponents []Drawable
 }
 
 // "static assert" that ActorBase implements Actor
-var _ = Actor((*ActorBase)(nil))
+var _ Actor = (*ActorBase)(nil)
+var _ Component = (*ActorBase)(nil)
 
 func (a *ActorBase) reset() {
 	a.tickableComponents = nil
 	a.drawableComponents = nil
 }
+func (a *ActorBase) SetOwner(Component)              { panic("Cannot SetOwner on an Actor") }
+func (a *ActorBase) GetOwner() Component             { return nil }
+func (a *ActorBase) SetComponents(comps []Component) { a.Components = comps }
+func (a *ActorBase) GetComponents() []Component      { return a.Components }
 
 func (a *ActorBase) BeginPlay() {
 	a.reset()
 	for _, component := range a.Components {
-		component.SetOwner(a)
-		if playable, ok := component.(Playable); ok {
-			playable.BeginPlay()
+		if component == nil {
+			continue
 		}
-		if tickable, ok := component.(Tickable); ok {
-			a.tickableComponents = append(a.tickableComponents, tickable)
-		}
-		if drawable, ok := component.(Drawable); ok {
-			a.drawableComponents = append(a.drawableComponents, drawable)
-		}
+		WalkComponents(component, func(component, parent Component) {
+			component.SetOwner(a)
+			if playable, ok := component.(Playable); ok {
+				playable.BeginPlay()
+			}
+			if tickable, ok := component.(Tickable); ok {
+				a.tickableComponents = append(a.tickableComponents, tickable)
+			}
+			if drawable, ok := component.(Drawable); ok {
+				a.drawableComponents = append(a.drawableComponents, drawable)
+			}
+		})
 	}
 }
 
@@ -97,15 +108,13 @@ func (a *ActorBase) Draw(screen *ebiten.Image) {
 	}
 }
 
-/*
-func FindComponent[T Component](owner Actor) T {
-	actor := owner.(*ActorBase)
-	target := reflect.TypeOf(owner)
-	for _, component := range actor.components {
-		if reflect.TypeOf(component) == target {
-			return component.(T)
-		}
-	}
-	return *new(T) // noooo
+func WalkComponents(c Component, callback func(target, parent Component)) {
+	walkComponents(c, nil, callback)
 }
-*/
+
+func walkComponents(target, parent Component, callback func(target, parent Component)) {
+	callback(target, parent)
+	for _, child := range target.GetComponents() {
+		walkComponents(child, target, callback)
+	}
+}

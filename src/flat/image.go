@@ -54,6 +54,13 @@ type ImageComponent struct {
 
 var _ = Component((*ImageComponent)(nil))
 
+func (c *ImageComponent) String() string {
+	if c.Image != nil && c.Image.Path != "" {
+		return "Image - " + string(c.Image.Path)
+	}
+	return "Image"
+}
+
 func (c *ImageComponent) BeginPlay() {
 	if c.Image == nil {
 		return

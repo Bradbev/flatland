@@ -92,7 +92,7 @@ func drawTree(root TreeNode, handler TreeNodeActionHandler, context *treeContext
 }
 
 func treeFlags(node TreeNode) imgui.TreeNodeFlags {
-	nodeFlags := imgui.TreeNodeFlagsNone
+	nodeFlags := imgui.TreeNodeFlagsOpenOnArrow
 	if node.Leaf() {
 		nodeFlags |= imgui.TreeNodeFlagsLeaf
 	}

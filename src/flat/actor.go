@@ -76,7 +76,10 @@ func (a *ActorBase) BeginPlay() {
 			continue
 		}
 		WalkComponents(component, func(component, parent Component) {
-			component.SetOwner(a)
+			if parent == nil {
+				parent = a
+			}
+			component.SetOwner(parent)
 			if playable, ok := component.(Playable); ok {
 				playable.BeginPlay()
 			}

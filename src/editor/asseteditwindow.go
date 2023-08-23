@@ -33,7 +33,7 @@ func (a *assetEditWindow) Draw() error {
 	if imgui.BeginV(a.path, &open, 0) {
 		enabled := a.context.hasChanged
 		edgui.WithDisabled(!enabled, func() {
-			imgui.SameLineV(0, imgui.WindowWidth()-120)
+			imgui.SameLineV(0, imgui.WindowWidth()-180)
 			reload := false
 			if imgui.Button("Save") && enabled {
 				asset.Save(asset.Path(a.path), a.target)
@@ -41,13 +41,19 @@ func (a *assetEditWindow) Draw() error {
 				reload = true
 			}
 			imgui.SameLine()
-			if (imgui.Button("Refresh") || reload) && enabled {
+			if (imgui.Button("Revert") || reload) && enabled {
 				asset.LoadWithOptions(asset.Path(a.path), asset.LoadOptions{ForceReload: true})
 				if playable, ok := a.target.(flat.Playable); ok {
 					playable.BeginPlay()
 				}
 			}
 		})
+		imgui.SameLine()
+		if imgui.Button("Refresh") {
+			if playable, ok := a.target.(flat.Playable); ok {
+				playable.BeginPlay()
+			}
+		}
 		value := reflect.ValueOf(a.target)
 		a.context.EditValue(value)
 	}

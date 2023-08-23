@@ -1,6 +1,7 @@
 {
   "Type": "github.com/bradbev/flatland/src/flat.Image",
+  "Parent": "",
   "Inner": {
-    "Path": "raw/apple-98.png"
+    "Path": "raw/apple.png"
   }
 }

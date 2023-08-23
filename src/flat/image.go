@@ -6,7 +6,6 @@ import (
 	"image"
 	_ "image/png"
 	"log"
-	"math"
 
 	"github.com/bradbev/flatland/src/asset"
 
@@ -89,7 +88,7 @@ func (c *ImageComponent) Draw(screen *ebiten.Image) {
 
 func ApplyTransform(transform Transform, geom *ebiten.GeoM) {
 	geom.Scale(transform.ScaleX, transform.ScaleY)
-	geom.Rotate(transform.Rotation * math.Pi / 180.0)
+	geom.Rotate(DegToRad(transform.Rotation))
 	geom.Translate(transform.Location.X, transform.Location.Y)
 }
 

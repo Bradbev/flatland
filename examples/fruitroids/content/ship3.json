@@ -2,6 +2,7 @@
   "Type": "github.com/bradbev/flatland/examples/fruitroids/src/fruitroids.Ship",
   "Parent": "",
   "Inner": {
+    "Acceleration": 15,
     "ActorBase": {
       "Components": [
         {
@@ -10,8 +11,8 @@
           "Inner": {
             "ComponentBase": {
               "Transform": {
-                "ScaleX": 0.10000000149011612,
-                "ScaleY": 0.10000000149011612
+                "ScaleX": 1,
+                "ScaleY": 1
               }
             },
             "Image": {
@@ -22,9 +23,16 @@
         }
       ],
       "Transform": {
+        "Location": {
+          "X": 67.33008770842551,
+          "Y": -144.92596082632298
+        },
+        "Rotation": 186,
         "ScaleX": 1,
         "ScaleY": 1
       }
-    }
+    },
+    "MaxVelocity": 150,
+    "RotationRate": 360
   }
 }

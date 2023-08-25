@@ -38,4 +38,5 @@ func (g *Fruitroids) Layout(outsideWidth, outsideHeight int) (int, int) {
 
 func RegisterFruitroidTypes() {
 	asset.RegisterAsset(Ship{})
+	asset.RegisterAsset(Roid{})
 }

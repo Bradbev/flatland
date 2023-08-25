@@ -1,8 +1,7 @@
 {
-  "Type": "github.com/bradbev/flatland/examples/fruitroids/src/fruitroids.Ship",
+  "Type": "github.com/bradbev/flatland/examples/fruitroids/src/fruitroids.Roid",
   "Parent": "",
   "Inner": {
-    "Acceleration": 30,
     "ActorBase": {
       "Components": [
         {
@@ -17,22 +16,15 @@
             },
             "Image": {
               "Type": "github.com/bradbev/flatland/src/flat.Image",
-              "Path": "apple.json"
+              "Path": "images/pineapple.json"
             }
           }
         }
       ],
       "Transform": {
-        "Location": {
-          "X": 321.41166005800096,
-          "Y": 62.87998498003742
-        },
-        "Rotation": 129,
-        "ScaleX": 0.5,
-        "ScaleY": 0.5
+        "ScaleX": 1,
+        "ScaleY": 1
       }
-    },
-    "MaxVelocity": 200,
-    "RotationRate": 270
+    }
   }
 }

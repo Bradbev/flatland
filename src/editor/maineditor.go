@@ -200,18 +200,21 @@ func (e *ImguiEditor) buildFileCache() *fswalk {
 		if path == "." {
 			return nil
 		}
-		if d != nil && d.IsDir() {
-			next := &fswalk{path: path}
-			peek().dirs = append(peek().dirs, next)
-			stack = append(stack, next)
-			return nil
-		}
+		// pop the stack if the incoming path doesn't match
 		for {
 			if strings.HasPrefix(path, peek().path) {
 				break
 			}
 			stack = stack[:len(stack)-1]
 		}
+		if d != nil && d.IsDir() {
+			// push dirs to the stack
+			next := &fswalk{path: path}
+			peek().dirs = append(peek().dirs, next)
+			stack = append(stack, next)
+			return nil
+		}
+
 		peek().files = append(peek().files, path)
 
 		return nil

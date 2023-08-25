@@ -13,7 +13,6 @@ import (
 
 type Ship struct {
 	flat.ActorBase
-	ticks        int
 	RotationRate float64
 	Acceleration float64
 	MaxVelocity  float64
@@ -28,7 +27,11 @@ func (s *Ship) BeginPlay() {
 
 func (s *Ship) Tick(deltaseconds float64) {
 	s.ActorBase.Tick(deltaseconds)
-	s.ticks++
+	s.handleInput(deltaseconds)
+	s.updatePhysics(deltaseconds)
+}
+
+func (s *Ship) handleInput(deltaseconds float64) {
 	isDown := func(key ebiten.Key) bool { return inpututil.KeyPressDuration(key) > 0 }
 	if isDown(ebiten.KeyArrowLeft) {
 		s.Transform.AddRotation(-s.RotationRate * deltaseconds)
@@ -55,13 +58,25 @@ func (s *Ship) Tick(deltaseconds float64) {
 	if isDown(ebiten.KeySpace) {
 		// fire
 	}
+}
 
+func (s *Ship) updatePhysics(deltaseconds float64) {
 	// move along our velocity
 	v := s.velocity.MulScalar(deltaseconds)
-	s.Transform.Add(*v)
+	s.Transform.Location = *s.Transform.Location.Add(v)
 }
 
 func (s *Ship) Draw(screen *ebiten.Image) {
+	pos := s.Transform.Location
+	b := screen.Bounds()
+	v := &s.velocity
+	if (pos.X < 0 && v.X < 0) || (pos.X > float64(b.Max.X) && v.X > 0) {
+		v.X *= -1
+	}
+	if (pos.Y < 0 && v.Y < 0) || (pos.Y > float64(b.Max.Y) && v.Y > 0) {
+		v.Y *= -1
+	}
+
 	s.ActorBase.Draw(screen)
 	x, y := s.Transform.Location.X, s.Transform.Location.Y
 	ebitenutil.DebugPrintAt(screen, fmt.Sprintf("Ship at %.2f %v %v", s.velocity.Magnitude(), s.velocity, s.Transform.Rotation), int(x), int(y))

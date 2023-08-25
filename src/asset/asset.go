@@ -65,6 +65,13 @@ type NamedAsset interface {
 	Name() string
 }
 
+// Any type that implements DefaultInitializer will
+// have DefaultInitialize called when assets are created.
+// Types do not need to be assets for this to work.
+type DefaultInitializer interface {
+	DefaultInitialize()
+}
+
 type FactoryFunc func() (Asset, error)
 
 func RegisterFileSystem(filesystem fs.FS, priority int) error {
@@ -239,12 +246,22 @@ func (a *assetManagerImpl) RegisterAssetFactory(zeroAsset any, factoryFunction F
 	if zeroType.Kind() != reflect.Struct {
 		log.Panicf("RegisterAssetFactory must be called with a concrete type that is a struct.  This is a programming error - %v", zeroAsset)
 	}
+
+	// wrap the client provided factoryFunc with one that also initializes structs
+	createFunc := func() (Asset, error) {
+		a, err := factoryFunction()
+		if a != nil {
+			callAllDefaultInitializers(a)
+		}
+		return a, err
+	}
+
 	name, typeName := ObjectTypeName(zeroAsset)
 	println("Registered asset ", typeName)
 	descriptor := &AssetDescriptor{
 		Name:     name,
 		FullName: typeName,
-		Create:   factoryFunction,
+		Create:   createFunc,
 	}
 	a.AssetDescriptors[typeName] = descriptor
 	a.AssetDescriptorList = append(a.AssetDescriptorList, descriptor)

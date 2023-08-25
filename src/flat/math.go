@@ -14,6 +14,11 @@ type Transform struct {
 	ScaleY   float64
 }
 
+func (t *Transform) DefaultInitialize() {
+	t.ScaleX = 1
+	t.ScaleY = 1
+}
+
 func (t *Transform) Add(v vector3.Vector3) {
 	t.Location = *t.Location.Add(&v)
 }

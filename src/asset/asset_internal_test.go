@@ -200,5 +200,29 @@ func TestFindDiffsFromParent(t *testing.T) {
 		expected := jsmap{"Slice": []any{1, 3}}
 		assert.Equal(t, expected, fd(p, c), "Differing slices need to be saved")
 	}
+}
 
+type testDefInit struct {
+	DidInit bool
+}
+
+func (t *testDefInit) DefaultInitialize() {
+	t.DidInit = true
+}
+
+func TestDefaultInitializer(t *testing.T) {
+	a := struct {
+		A testDefInit
+		B *testDefInit
+		C any
+	}{
+		B: &testDefInit{},
+		C: &testDefInit{},
+	}
+
+	callAllDefaultInitializers(&a)
+
+	assert.True(t, a.A.DidInit)
+	assert.True(t, a.B.DidInit)
+	assert.True(t, a.C.(*testDefInit).DidInit)
 }

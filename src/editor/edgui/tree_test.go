@@ -33,6 +33,4 @@ func TestTreeWalk(t *testing.T) {
 			fmt.Println(a == e)
 		}
 	})
-
-	t.Fail()
 }

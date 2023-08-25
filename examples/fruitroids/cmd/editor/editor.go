@@ -35,6 +35,7 @@ func main() {
 		fmt.Println(err)
 		game := &fruitroids.Fruitroids{}
 		game.World = world.(*flat.World)
+		fruitroids.ActiveWorld = game
 		game.World.BeginPlay()
 		return game
 	})

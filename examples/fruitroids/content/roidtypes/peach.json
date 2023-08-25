@@ -1,0 +1,30 @@
+{
+  "Type": "github.com/bradbev/flatland/examples/fruitroids/src/fruitroids.Roid",
+  "Parent": "",
+  "Inner": {
+    "ActorBase": {
+      "Components": [
+        {
+          "Type": "github.com/bradbev/flatland/src/flat.ImageComponent",
+          "Parent": "",
+          "Inner": {
+            "ComponentBase": {
+              "Transform": {
+                "ScaleX": 1,
+                "ScaleY": 1
+              }
+            },
+            "Image": {
+              "Type": "github.com/bradbev/flatland/src/flat.Image",
+              "Path": "images/peach.json"
+            }
+          }
+        }
+      ],
+      "Transform": {
+        "ScaleX": 1,
+        "ScaleY": 1
+      }
+    }
+  }
+}

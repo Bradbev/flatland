@@ -104,6 +104,11 @@ type LoadOptions struct {
 	// ForceReload will reload the asset from disk.  If the asset already
 	// exists in memory that same object will be reused.
 	ForceReload bool
+
+	// createInstance loads the instance in such a way that a new asset is created
+	// Pointers to assets in the object will point to existing in-memory assets.  Anything saved
+	// inline will be loaded fresh
+	createInstance bool
 }
 
 func LoadWithOptions(assetPath Path, options LoadOptions) (Asset, error) {
@@ -112,6 +117,10 @@ func LoadWithOptions(assetPath Path, options LoadOptions) (Asset, error) {
 
 func Load(assetPath Path) (Asset, error) {
 	return assetManager.Load(assetPath)
+}
+
+func NewInstance(a Asset) (Asset, error) {
+	return assetManager.NewInstance(a)
 }
 
 func Save(path Path, toSave Asset) error {

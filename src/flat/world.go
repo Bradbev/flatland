@@ -26,15 +26,19 @@ func (w *World) PostLoad() {
 func (w *World) BeginPlay() {
 	w.reset()
 	for _, actor := range w.PersistentActors {
-		if tickable, ok := actor.(Tickable); ok {
-			w.tickables = append(w.tickables, tickable)
-		}
-		if drawable, ok := actor.(Drawable); ok {
-			w.drawables = append(w.drawables, drawable)
-		}
-		if playable, ok := actor.(Playable); ok {
-			playable.BeginPlay()
-		}
+		w.AddToWorld(actor)
+	}
+}
+
+func (w *World) AddToWorld(actor Actor) {
+	if tickable, ok := actor.(Tickable); ok {
+		w.tickables = append(w.tickables, tickable)
+	}
+	if drawable, ok := actor.(Drawable); ok {
+		w.drawables = append(w.drawables, drawable)
+	}
+	if playable, ok := actor.(Playable); ok {
+		playable.BeginPlay()
 	}
 }
 

@@ -1,14 +1,18 @@
 package fruitroids
 
 import (
+	"fmt"
+
 	"github.com/bradbev/flatland/src/flat"
 	"github.com/deeean/go-vector/vector3"
 	"github.com/hajimehoshi/ebiten/v2"
+	"github.com/hajimehoshi/ebiten/v2/ebitenutil"
 )
 
 type Roid struct {
 	flat.ActorBase
-	velocity vector3.Vector3
+	velocity      vector3.Vector3
+	rotationDelta float64
 }
 
 func (r *Roid) Tick(deltaseconds float64) {
@@ -20,6 +24,7 @@ func (r *Roid) updatePhysics(deltaseconds float64) {
 	// move along our velocity
 	v := r.velocity.MulScalar(deltaseconds)
 	r.Transform.Location = *r.Transform.Location.Add(v)
+	r.Transform.AddRotation(r.rotationDelta)
 }
 
 func (r *Roid) Draw(screen *ebiten.Image) {
@@ -34,4 +39,6 @@ func (r *Roid) Draw(screen *ebiten.Image) {
 	}
 
 	r.ActorBase.Draw(screen)
+	x, y := r.Transform.Location.X, r.Transform.Location.Y
+	ebitenutil.DebugPrintAt(screen, fmt.Sprintf("Roid at %v", r.Transform), int(x), int(y))
 }

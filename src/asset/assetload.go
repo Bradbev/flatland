@@ -13,11 +13,22 @@ func (a *assetManagerImpl) Load(assetPath Path) (Asset, error) {
 	return a.LoadWithOptions(assetPath, LoadOptions{})
 }
 
+func (a *assetManagerImpl) NewInstance(toInstance Asset) (Asset, error) {
+	if path, ok := a.AssetToLoadPath[toInstance]; ok {
+		return a.LoadWithOptions(path, LoadOptions{createInstance: true})
+	}
+	return nil, fmt.Errorf("Unable to find path for asset %v", a)
+}
+
 func (a *assetManagerImpl) LoadWithOptions(assetPath Path, options LoadOptions) (Asset, error) {
 	// If we are able, don't reload an existing asset
 	alreadyLoadedAsset, loaded := a.LoadPathToAsset[assetPath]
-	if loaded && !options.ForceReload {
+	if loaded && !options.ForceReload && !options.createInstance {
 		return alreadyLoadedAsset, nil
+	}
+
+	if options.createInstance {
+		alreadyLoadedAsset = nil
 	}
 
 	data, err := assetManager.ReadFile(assetPath)
@@ -37,7 +48,7 @@ func (a *assetManagerImpl) LoadWithOptions(assetPath Path, options LoadOptions) 
 		return nil, err
 	}
 
-	if err == nil {
+	if err == nil && !options.createInstance {
 		// save the references to these assets to prevent future loading
 		a.AssetToLoadPath[loadedAsset] = assetPath
 		a.LoadPathToAsset[assetPath] = loadedAsset

@@ -64,7 +64,11 @@ func (a *ActorBase) reset() {
 	a.tickableComponents = nil
 	a.drawableComponents = nil
 }
-func (a *ActorBase) SetOwner(Component)              { panic("Cannot SetOwner on an Actor") }
+func (a *ActorBase) SetOwner(o Component) {
+	if o != nil {
+		panic("Cannot SetOwner on an Actor")
+	}
+}
 func (a *ActorBase) GetOwner() Component             { return nil }
 func (a *ActorBase) SetComponents(comps []Component) { a.Components = comps }
 func (a *ActorBase) GetComponents() []Component      { return a.Components }

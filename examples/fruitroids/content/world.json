@@ -2,14 +2,20 @@
   "Type": "github.com/bradbev/flatland/src/flat.World",
   "Parent": "",
   "Inner": {
+    "ActorBase": {
+      "Transform": {
+        "ScaleX": 1,
+        "ScaleY": 1
+      }
+    },
     "PersistentActors": [
       {
         "Type": "github.com/bradbev/flatland/examples/fruitroids/src/fruitroids.Ship",
         "Path": "ship3.json"
       },
       {
-        "Type": "github.com/bradbev/flatland/examples/fruitroids/src/fruitroids.Roid",
-        "Path": "roidtypes/pineapple.json"
+        "Type": "github.com/bradbev/flatland/examples/fruitroids/src/fruitroids.LevelSpawn",
+        "Path": "level.json"
       }
     ]
   }

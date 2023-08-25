@@ -41,6 +41,16 @@ func TestAssetLoad(t *testing.T) {
 		assert.True(t, ok, "Unable to convert %v to testType", a)
 		assert.Equal(t, toTest.Anykey, "hi")
 		assert.True(t, toTest.postLoadCalled, "PostLoad was not called")
+
+		inst, err := asset.NewInstance(toTest)
+		assert.NoError(t, err)
+		prevTest := toTest
+		toTest, ok = inst.(*testAsset)
+		assert.True(t, toTest != prevTest, "Pointers must be different, but they are the same.")
+		assert.True(t, ok, "Unable to convert %v to testType", a)
+		assert.Equal(t, toTest.Anykey, "hi")
+		assert.True(t, toTest.postLoadCalled, "PostLoad was not called")
+
 	}
 	testAssetLoad(func() {
 		t.Log("Testing RegisterAsset")
@@ -428,17 +438,14 @@ func TestInlineAssetSaving(t *testing.T) {
 
 	err := asset.Save("inlined.json", toSave)
 	assert.NoError(t, err)
-	{
-		data, _ := fs.ReadFile(rootFS.fs, "inlined.json")
-		fmt.Printf("%s\n", string(data))
-	}
 
 	reset()
 
 	loaded, err := asset.Load("inlined.json")
 	assert.NoError(t, err)
 	expected := &inlineSaving{
-		SaveInline: &inlineInnerSaveStruct{"InlineA", "ParentB"},
+		SaveInline:          &inlineInnerSaveStruct{"InlineA", "ParentB"},
+		SaveInterfaceInline: &inlineInnerSaveStruct{"IfaceA", "IfaceB"},
 	}
 	assert.Equal(t, expected, loaded)
 
@@ -451,6 +458,14 @@ func TestInlineAssetSaving(t *testing.T) {
       "Parent": "parent.json",
       "Inner": {
         "ItemA": "InlineA"
+      }
+    },
+    "SaveInterfaceInline": {
+      "Type": "github.com/bradbev/flatland/src/asset_test.inlineInnerSaveStruct",
+      "Parent": "",
+      "Inner": {
+        "ItemA": "IfaceA",
+        "ItemB": "IfaceB"
       }
     }
   }

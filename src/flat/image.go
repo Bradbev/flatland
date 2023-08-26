@@ -86,7 +86,7 @@ func (c *ImageComponent) Draw(screen *ebiten.Image) {
 	}
 }
 
-func ApplyTransform(transform Transform, geom *ebiten.GeoM) {
+func ApplyTransform(transform *Transform, geom *ebiten.GeoM) {
 	geom.Scale(transform.ScaleX, transform.ScaleY)
 	geom.Rotate(DegToRad(transform.Rotation))
 	geom.Translate(transform.Location.X, transform.Location.Y)

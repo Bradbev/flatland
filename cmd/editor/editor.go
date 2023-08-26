@@ -37,6 +37,7 @@ func main() {
 	edtest.TreeTestInit()
 
 	asset.RegisterAsset(EditTest{})
+	asset.RegisterAsset(actorTest{})
 	flat.RegisterAllFlatTypes()
 	editors.RegisterAllFlatEditors(gg.ed)
 
@@ -53,6 +54,7 @@ func main() {
 		asset.SetParent(&defaultTestObjectChild, &defaultTestObject)
 		gg.ed.EditAsset("childedit.json")
 	*/
+	gg.ed.EditAsset("actorTest.json")
 
 	menu := edgui.Menu{
 		Name: "Custom Item",

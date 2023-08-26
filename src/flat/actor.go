@@ -20,7 +20,7 @@ type Component interface {
 }
 
 type Transformer interface {
-	GetTransform() Transform
+	GetTransform() *Transform
 }
 
 type Tickable interface {
@@ -47,7 +47,7 @@ func (c *ComponentBase) SetOwner(owner Component)        { c.Owner = owner }
 func (c *ComponentBase) GetOwner() Component             { return c.Owner }
 func (c *ComponentBase) SetComponents(comps []Component) { c.Children = comps }
 func (c *ComponentBase) GetComponents() []Component      { return c.Children }
-func (c *ComponentBase) GetTransform() Transform         { return c.Transform }
+func (c *ComponentBase) GetTransform() *Transform        { return &c.Transform }
 
 type ActorBase struct {
 	Transform          Transform
@@ -99,8 +99,8 @@ func (a *ActorBase) BeginPlay() {
 
 func (a *ActorBase) IsActor() {}
 
-func (a *ActorBase) GetTransform() Transform {
-	return a.Transform
+func (a *ActorBase) GetTransform() *Transform {
+	return &a.Transform
 }
 
 func (a *ActorBase) Tick(deltaseconds float64) {

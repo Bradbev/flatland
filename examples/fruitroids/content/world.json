@@ -15,7 +15,7 @@
       },
       {
         "Type": "github.com/bradbev/flatland/examples/fruitroids/src/fruitroids.LevelSpawn",
-        "Path": "level.json"
+        "Path": "spawner.json"
       }
     ]
   }

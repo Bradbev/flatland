@@ -1,6 +1,9 @@
 package flat
 
-import "github.com/hajimehoshi/ebiten/v2"
+import (
+	"github.com/bradbev/flatland/src/asset"
+	"github.com/hajimehoshi/ebiten/v2"
+)
 
 type World struct {
 	ActorBase
@@ -26,7 +29,8 @@ func (w *World) PostLoad() {
 func (w *World) BeginPlay() {
 	w.reset()
 	for _, actor := range w.PersistentActors {
-		w.AddToWorld(actor)
+		instance, _ := asset.NewInstance(actor)
+		w.AddToWorld(instance.(Actor))
 	}
 }
 

@@ -9,6 +9,8 @@ information hiding/abstraction against reflection?
 
 - error handling, or lack of it.  I really want to wrap up every error created and log it at the create point with a stack (?).  Need a way to pipe errors into an editor dialog window
 
+- some sort of global context for the "world", otherwise objects won't be able to interact with each other.
+
 # Next Goal
 - Tags on the struct/tag handling clean up (ie `flat:"<tags>"`)
 - Asset package needs cleaning, code coverage etc

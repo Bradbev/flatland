@@ -1,0 +1,12 @@
+{
+  "Type": "main.actorTest",
+  "Parent": "",
+  "Inner": {
+    "ActorBase": {
+      "Transform": {
+        "ScaleX": 1,
+        "ScaleY": 1
+      }
+    }
+  }
+}

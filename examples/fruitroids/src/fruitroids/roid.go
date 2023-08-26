@@ -1,12 +1,9 @@
 package fruitroids
 
 import (
-	"fmt"
-
 	"github.com/bradbev/flatland/src/flat"
 	"github.com/deeean/go-vector/vector3"
 	"github.com/hajimehoshi/ebiten/v2"
-	"github.com/hajimehoshi/ebiten/v2/ebitenutil"
 )
 
 type Roid struct {
@@ -39,6 +36,6 @@ func (r *Roid) Draw(screen *ebiten.Image) {
 	}
 
 	r.ActorBase.Draw(screen)
-	x, y := r.Transform.Location.X, r.Transform.Location.Y
-	ebitenutil.DebugPrintAt(screen, fmt.Sprintf("Roid at %v", r.Transform), int(x), int(y))
+	//x, y := r.Transform.Location.X, r.Transform.Location.Y
+	//ebitenutil.DebugPrintAt(screen, fmt.Sprintf("Roid at %v", r.Transform), int(x), int(y))
 }

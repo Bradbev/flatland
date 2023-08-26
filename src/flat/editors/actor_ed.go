@@ -9,6 +9,7 @@ import (
 	"github.com/bradbev/flatland/src/editor"
 	"github.com/bradbev/flatland/src/editor/edgui"
 	"github.com/bradbev/flatland/src/flat"
+	"github.com/deeean/go-vector/vector3"
 	"golang.org/x/exp/slices"
 
 	"github.com/inkyblackness/imgui-go/v4"
@@ -42,6 +43,7 @@ func actorEd(context *editor.TypeEditContext, value reflect.Value) error {
 		imgui.TableFlagsContextMenuInBody
 	if imgui.BeginTableV(context.ID("ActorEd##"), 3, flags, imgui.Vec2{}, 0) {
 		defer imgui.EndTable()
+
 		imgui.TableNextRow()
 
 		imgui.TableSetColumnIndex(0)
@@ -51,21 +53,25 @@ func actorEd(context *editor.TypeEditContext, value reflect.Value) error {
 		editor.StructEd(context, c.valueToEdit)
 
 		imgui.TableSetColumnIndex(2)
-		renderActor(context, value)
+		renderActor(actor, context, value)
 	}
 	return nil
 }
 
-func renderActor(context *editor.TypeEditContext, value reflect.Value) error {
+func renderActor(actor flat.Actor, context *editor.TypeEditContext, value reflect.Value) error {
 	imgui.Text("Rendered View")
 	w := imgui.ColumnWidth()
-	id, img := context.Ed.GetImguiTexture(value, int(w), int(w))
+	id, img := context.Ed.GetImguiTexture(value, w, w)
 	img.Fill(color.Black)
 	if tickable, ok := value.Addr().Interface().(flat.Tickable); ok {
 		tickable.Tick(1 / 60.0)
 	}
 	if drawable, ok := value.Addr().Interface().(flat.Drawable); ok {
+		transform := actor.GetTransform()
+		savedLocation := transform.Location
+		transform.Location = vector3.Vector3{X: f64(w) / 2, Y: f64(w) / 2, Z: 0}
 		drawable.Draw(img)
+		transform.Location = savedLocation
 	}
 	// tell imgui to draw the ebiten.Image
 	imgui.Image(id, imgui.Vec2{X: f32(w), Y: f32(w)})
@@ -268,4 +274,25 @@ func (a *AddComponentDialog) Draw() bool {
 		}
 	}
 	return false
+}
+
+func actorBaseEd(context *editor.TypeEditContext, value reflect.Value) error {
+	base := value.Addr().Interface().(*flat.ActorBase)
+	if edgui.DragFloat3("Location   ",
+		"X", &base.Transform.Location.X,
+		"Y", &base.Transform.Location.Y,
+		"Z", &base.Transform.Location.Z) {
+		context.SetChanged()
+	}
+
+	if edgui.DragFloat64("Rotation  ", &base.Transform.Rotation) {
+		context.SetChanged()
+	}
+
+	if edgui.DragFloat2("Scale      ",
+		"X", &base.Transform.ScaleX,
+		"Y", &base.Transform.ScaleY) {
+		context.SetChanged()
+	}
+	return nil
 }

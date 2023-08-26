@@ -1,13 +1,10 @@
 package fruitroids
 
 import (
-	"fmt"
-
 	"github.com/bradbev/flatland/src/flat"
 	"github.com/deeean/go-vector/vector3"
 
 	"github.com/hajimehoshi/ebiten/v2"
-	"github.com/hajimehoshi/ebiten/v2/ebitenutil"
 	"github.com/hajimehoshi/ebiten/v2/inpututil"
 )
 
@@ -78,6 +75,6 @@ func (s *Ship) Draw(screen *ebiten.Image) {
 	}
 
 	s.ActorBase.Draw(screen)
-	x, y := s.Transform.Location.X, s.Transform.Location.Y
-	ebitenutil.DebugPrintAt(screen, fmt.Sprintf("Ship at %.2f %v %v", s.velocity.Magnitude(), s.velocity, s.Transform.Rotation), int(x), int(y))
+	//x, y := s.Transform.Location.X, s.Transform.Location.Y
+	//	ebitenutil.DebugPrintAt(screen, fmt.Sprintf("Ship at %.2f %v %v", s.velocity.Magnitude(), s.velocity, s.Transform.Rotation), int(x), int(y))
 }

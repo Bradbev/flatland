@@ -18,11 +18,11 @@ type Fruitroids struct {
 var ActiveWorld *Fruitroids
 
 func (g *Fruitroids) Draw(screen *ebiten.Image) {
-	ebitenutil.DebugPrintAt(screen, fmt.Sprintf("TPS: %.3f\nFPS: %.2f\n", ebiten.ActualTPS(), ebiten.ActualFPS()), 11, 2)
-	ebitenutil.DebugPrintAt(screen, "FRUITROIDS", 11, 30)
 	if g.World != nil {
 		g.World.Draw(screen)
 	}
+	ebitenutil.DebugPrintAt(screen, fmt.Sprintf("TPS: %.3f\nFPS: %.2f\n", ebiten.ActualTPS(), ebiten.ActualFPS()), 11, 2)
+	ebitenutil.DebugPrintAt(screen, "FRUITROIDS", 11, 30)
 }
 
 func (g *Fruitroids) Update() error {

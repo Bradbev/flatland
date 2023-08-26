@@ -269,8 +269,8 @@ func (e *typeEditor) gatherInterfaceEditorFuncs(value reflect.Value) []ifaceFnPa
 			matches = append(matches, typ)
 		}
 	}
-	slices.SortFunc(matches, func(a, b reflect.Type) bool {
-		return strings.Compare(a.Name(), b.Name()) == -1
+	slices.SortFunc(matches, func(a, b reflect.Type) int {
+		return strings.Compare(a.Name(), b.Name())
 	})
 	ret := []ifaceFnPair{}
 	for _, key := range matches {

@@ -216,8 +216,8 @@ func newAssetManagerImpl() *assetManagerImpl {
 
 func (a *assetManagerImpl) AddFS(wrapper *fsWrapper) error {
 	a.FileSystems = append(a.FileSystems, wrapper)
-	slices.SortFunc(a.FileSystems, func(a, b *fsWrapper) bool {
-		return a.Priority < b.Priority
+	slices.SortFunc(a.FileSystems, func(a, b *fsWrapper) int {
+		return a.Priority - b.Priority
 	})
 	return nil
 }
@@ -274,8 +274,8 @@ func (a *assetManagerImpl) RegisterAssetFactory(zeroAsset any, factoryFunction F
 	}
 	a.AssetDescriptors[typeName] = descriptor
 	a.AssetDescriptorList = append(a.AssetDescriptorList, descriptor)
-	slices.SortFunc(a.AssetDescriptorList, func(a, b *AssetDescriptor) bool {
-		return strings.Compare(a.Name, b.Name) == -1
+	slices.SortFunc(a.AssetDescriptorList, func(a, b *AssetDescriptor) int {
+		return strings.Compare(a.Name, b.Name)
 	})
 }
 

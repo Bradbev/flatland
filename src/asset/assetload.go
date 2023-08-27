@@ -185,7 +185,7 @@ func (a *assetManagerImpl) unmarshalFromValues(source reflect.Value, dest reflec
 			//fmt.Printf("Key %v Data %v\n", key, dataToRead)
 
 			if dataToRead.Kind() == reflect.Invalid {
-				log.Printf("dataToRead for key (%s) is missing, skipping", key)
+				//log.Printf("dataToRead for key (%s) is missing, skipping", key)
 				continue
 			}
 			a.unmarshalFromValues(dataToRead.Elem(), fieldToSet)

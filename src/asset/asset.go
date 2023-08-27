@@ -47,6 +47,7 @@ type AssetDescriptor struct {
 	Name     string
 	FullName string
 	Create   FactoryFunc
+	Type     reflect.Type
 }
 
 // Asset can be any type.
@@ -143,6 +144,24 @@ func LoadPathForAsset(a Asset) (Path, error) {
 // registered with asset.RegisterFileSystem
 func WalkFiles(fn fs.WalkDirFunc) error {
 	return assetManager.WalkFiles(fn)
+}
+
+func FilterFilesByType[T any]() ([]string, error) {
+	typ := reflect.TypeOf((*T)(nil))
+	return FilterFilesByReflectType(typ)
+}
+
+func FilterFilesByReflectType(typ reflect.Type) ([]string, error) {
+	return assetManager.FilterFilesByType(typ)
+}
+
+func FilterAssetDescriptorsByType[T any]() []*AssetDescriptor {
+	typ := reflect.TypeOf((*T)(nil))
+	return FilterAssetDescriptorsByReflectType(typ)
+}
+
+func FilterAssetDescriptorsByReflectType(typ reflect.Type) []*AssetDescriptor {
+	return assetManager.FilterAssetDescriptorsByType(typ)
 }
 
 func Reset() {
@@ -250,6 +269,70 @@ func (a *assetManagerImpl) WalkFiles(fn fs.WalkDirFunc) error {
 	return e
 }
 
+// FilterFilesByType will return all the assets that have the exact type as typ.  If typ
+// is an interface, return all the files that implement the interface
+func (a *assetManagerImpl) FilterFilesByType(typ reflect.Type) ([]string, error) {
+	if typ.Kind() == reflect.Pointer {
+		typ = typ.Elem()
+	}
+	var ret []string
+	err := a.WalkFiles(func(path string, d fs.DirEntry, _ error) error {
+		if d != nil && d.IsDir() {
+			return nil
+		}
+		if !strings.HasSuffix(path, ".json") {
+			return nil
+		}
+		// TODO - unify this with the load snippet in assetload.go
+		data, err := assetManager.ReadFile(Path(path))
+		if err != nil {
+			return err
+		}
+		container := loadedAssetContainer{}
+		err = json.Unmarshal(data, &container)
+		if err != nil {
+			return nil
+		}
+		if desc, ok := a.AssetDescriptors[container.Type]; ok {
+			if matchesOrImplements(typ, desc.Type) {
+				ret = append(ret, path)
+			}
+		}
+
+		return nil
+	})
+	return ret, err
+}
+
+// returns true if a and b are the same type or b implements a
+func matchesOrImplements(a, b reflect.Type) bool {
+	if a == b {
+		return true
+	}
+	if a.Kind() == reflect.Interface {
+		// if we are matching against an interface we need to use PtrTo
+		// because the Type in the descriptor is the real type, not a *T
+		ptrTyp := reflect.PtrTo(b)
+		return ptrTyp.Implements(a)
+	}
+	return false
+}
+
+// FilterAssetDecriptorsByType will return all the asset descriptors that have the exact type as typ.  If typ
+// is an interface, return all the descriptors that implement the interface
+func (a *assetManagerImpl) FilterAssetDescriptorsByType(typ reflect.Type) []*AssetDescriptor {
+	if typ.Kind() == reflect.Pointer {
+		typ = typ.Elem()
+	}
+	var ret []*AssetDescriptor
+	for _, desc := range a.AssetDescriptorList {
+		if matchesOrImplements(typ, desc.Type) {
+			ret = append(ret, desc)
+		}
+	}
+	return ret
+}
+
 func (a *assetManagerImpl) RegisterAssetFactory(zeroAsset any, factoryFunction FactoryFunc) {
 	zeroType := reflect.TypeOf(zeroAsset)
 	if zeroType.Kind() != reflect.Struct {
@@ -271,6 +354,7 @@ func (a *assetManagerImpl) RegisterAssetFactory(zeroAsset any, factoryFunction F
 		Name:     name,
 		FullName: typeName,
 		Create:   createFunc,
+		Type:     zeroType,
 	}
 	a.AssetDescriptors[typeName] = descriptor
 	a.AssetDescriptorList = append(a.AssetDescriptorList, descriptor)

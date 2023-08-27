@@ -29,6 +29,9 @@ func (w *World) PostLoad() {
 func (w *World) BeginPlay() {
 	w.reset()
 	for _, actor := range w.PersistentActors {
+		if actor == nil {
+			continue
+		}
 		instance, _ := asset.NewInstance(actor)
 		w.AddToWorld(instance.(Actor))
 	}

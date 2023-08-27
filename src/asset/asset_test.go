@@ -473,3 +473,70 @@ func TestInlineAssetSaving(t *testing.T) {
 	data, err := fs.ReadFile(rootFS.fs, "inlined.json")
 	assert.Equal(t, exactFileContent, string(data), "The inlined field has a parent etc")
 }
+
+type testFilter struct{}
+
+func (t *testFilter) IFaceFunc() {}
+
+type testFilter2 struct{}
+
+type testIFace interface {
+	IFaceFunc()
+}
+
+func TestAssetTypeFiltering(t *testing.T) {
+	rootFS := newWriteFS()
+	reset := func() {
+		asset.Reset()
+		asset.RegisterFileSystem(rootFS.fs, 0)
+		asset.RegisterWritableFileSystem(rootFS)
+		asset.RegisterAsset(testFilter{})
+		asset.RegisterAsset(testFilter2{})
+	}
+	reset()
+
+	asset.Save("testfilter1.json", &testFilter{})
+	// have a second file to validate we aren't just returning everything
+	asset.Save("testfilter2.json", &testFilter2{})
+
+	files, err := asset.FilterFilesByType[testFilter]()
+	assert.NoError(t, err)
+	assert.Equal(t, []string{"testfilter1.json"}, files, "Exact type of the object matches")
+
+	files, err = asset.FilterFilesByType[testIFace]()
+	assert.NoError(t, err)
+	assert.Equal(t, []string{"testfilter1.json"}, files, "Interface types matches")
+
+	files, err = asset.FilterFilesByType[any]()
+	assert.NoError(t, err)
+	assert.Equal(t, []string{"testfilter1.json", "testfilter2.json"}, files, "Any matches every file")
+}
+
+func TestAssetDescriptorTypeFiltering(t *testing.T) {
+	rootFS := newWriteFS()
+	reset := func() {
+		asset.Reset()
+		asset.RegisterFileSystem(rootFS.fs, 0)
+		asset.RegisterWritableFileSystem(rootFS)
+		asset.RegisterAsset(testFilter{})
+		asset.RegisterAsset(testFilter2{})
+	}
+	reset()
+
+	allDescriptors := asset.GetAssetDescriptors()
+	var expected *asset.AssetDescriptor
+	for _, d := range allDescriptors {
+		if d.Name == "testFilter" {
+			expected = d
+		}
+	}
+
+	desc := asset.FilterAssetDescriptorsByType[testFilter]()
+	assert.Equal(t, expected, desc[0], "Exact type of the object matches")
+
+	desc = asset.FilterAssetDescriptorsByType[testIFace]()
+	assert.Equal(t, expected, desc[0], "Exact type of the object matches")
+
+	desc = asset.FilterAssetDescriptorsByType[any]()
+	assert.Equal(t, allDescriptors, desc, "Exact type of the object matches")
+}

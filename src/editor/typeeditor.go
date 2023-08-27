@@ -315,17 +315,7 @@ func interfaceEd(context *TypeEditContext, value reflect.Value) error {
 	// onActivated can be replaced in the future with something that is
 	// much smarter about filtering the asset types
 	onActivated := func() []string {
-		var items []string
-		asset.WalkFiles(func(path string, d fs.DirEntry, err error) error {
-			// do not include directories
-			if d != nil && d.IsDir() {
-				return nil
-			}
-			if strings.Contains(path, ".json") {
-				items = append(items, path)
-			}
-			return nil
-		})
+		items, _ := asset.FilterFilesByReflectType(value.Type())
 		return items
 	}
 

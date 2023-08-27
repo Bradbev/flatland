@@ -32,7 +32,7 @@ func actorEd(context *editor.TypeEditContext, value reflect.Value) error {
 			context: c,
 			actor:   actor,
 		}
-		c.addDialog = &AddComponentDialog{Id: "addComponent"}
+		c.addDialog = &AddComponentDialog{Id: "Add Component"}
 		c.valueToEdit = value
 	}
 
@@ -79,11 +79,13 @@ func renderActor(actor flat.Actor, context *editor.TypeEditContext, value reflec
 }
 
 func componentTree(actor flat.Actor, actorEd *actorEdContext, context *editor.TypeEditContext, value reflect.Value) error {
-	if imgui.Button("Add Component") {
+	imgui.Text("Component")
+	imgui.SameLine()
+	if imgui.Button("Add") {
 		actorEd.addDialog.Open()
 	}
 	imgui.SameLine()
-	if imgui.Button("Delete") {
+	if imgui.Button("Remove") {
 		edgui.WalkTree(actorEd.componentTreeRoot, nil, func(node edgui.TreeNode, context any) {
 			if node.(*componentTreeNode).selected {
 				removeNode(actorEd.componentTreeRoot, node)
@@ -252,10 +254,23 @@ func buildComponentTree(actor flat.Actor) *componentTreeNode {
 type AddComponentDialog struct {
 	Id            string
 	assetToCreate *asset.AssetDescriptor
+
+	componentDescriptors []*asset.AssetDescriptor
 }
 
 func (a *AddComponentDialog) Open() {
 	imgui.OpenPopup(a.Id)
+	a.componentDescriptors = nil
+	a.assetToCreate = nil
+
+	// cache off the component descriptors
+	actors := flat.SliceToSet(asset.FilterAssetDescriptorsByType[flat.Actor]())
+	for _, desc := range asset.FilterAssetDescriptorsByType[flat.Component]() {
+		// Don't show Actors when adding components
+		if _, isActor := actors[desc]; !isActor {
+			a.componentDescriptors = append(a.componentDescriptors, desc)
+		}
+	}
 }
 
 func (a *AddComponentDialog) Draw() bool {
@@ -264,7 +279,7 @@ func (a *AddComponentDialog) Draw() bool {
 		defer imgui.EndPopup()
 		imgui.Text("Create Component")
 		imgui.Separator()
-		for _, desc := range asset.GetAssetDescriptors() {
+		for _, desc := range a.componentDescriptors {
 			imgui.TreeNodeV(desc.Name, imgui.TreeNodeFlagsLeaf|imgui.TreeNodeFlagsNoTreePushOnOpen)
 			if imgui.IsItemClicked() {
 				a.assetToCreate = desc
@@ -285,7 +300,7 @@ func actorBaseEd(context *editor.TypeEditContext, value reflect.Value) error {
 		context.SetChanged()
 	}
 
-	if edgui.DragFloat64("Rotation  ", &base.Transform.Rotation) {
+	if edgui.DragFloat64("Rotation     ", &base.Transform.Rotation) {
 		context.SetChanged()
 	}
 

@@ -1,6 +1,7 @@
 # Quickstart
 
-You'll need [Go](https://go.dev/dl/) installed.
+You'll need [Go](https://go.dev/dl/) installed.  The editor uses CGO, so you will need gcc installed.  On Windows I use https://jmeubank.github.io/tdm-gcc/.  On OSX I use the XCode installed toolchain.
+I intend to keep the game binaries pure Go so that WASM can be targetted. 
 
 From the root directory:
 `go run cmd/editor/editor.go`  - run the test editor

@@ -12,14 +12,14 @@ type Roid struct {
 	rotationDelta float64
 }
 
-func (r *Roid) Tick(deltaseconds float64) {
-	r.ActorBase.Tick(deltaseconds)
-	r.updatePhysics(deltaseconds)
+func (r *Roid) Update() {
+	r.ActorBase.Update()
+	r.updatePhysics()
 }
 
-func (r *Roid) updatePhysics(deltaseconds float64) {
+func (r *Roid) updatePhysics() {
 	// move along our velocity
-	v := r.velocity.MulScalar(deltaseconds)
+	v := r.velocity.MulScalar(flat.FrameTime())
 	r.Transform.Location = *r.Transform.Location.Add(v)
 	r.Transform.AddRotation(r.rotationDelta)
 }

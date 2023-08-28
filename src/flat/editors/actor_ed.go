@@ -63,8 +63,8 @@ func renderActor(actor flat.Actor, context *editor.TypeEditContext, value reflec
 	w := imgui.ColumnWidth()
 	id, img := context.Ed.GetImguiTexture(value, w, w)
 	img.Fill(color.Black)
-	if tickable, ok := value.Addr().Interface().(flat.Tickable); ok {
-		tickable.Tick(1 / 60.0)
+	if updateable, ok := value.Addr().Interface().(flat.Updateable); ok {
+		updateable.Update()
 	}
 	if drawable, ok := value.Addr().Interface().(flat.Drawable); ok {
 		transform := actor.GetTransform()

@@ -23,8 +23,8 @@ type Transformer interface {
 	GetTransform() *Transform
 }
 
-type Tickable interface {
-	Tick(deltaseconds float64)
+type Updateable interface {
+	Update()
 }
 
 type Drawable interface {
@@ -50,10 +50,10 @@ func (c *ComponentBase) GetComponents() []Component      { return c.Children }
 func (c *ComponentBase) GetTransform() *Transform        { return &c.Transform }
 
 type ActorBase struct {
-	Transform          Transform
-	Components         []Component `flat:"inline"`
-	tickableComponents []Tickable
-	drawableComponents []Drawable
+	Transform            Transform
+	Components           []Component `flat:"inline"`
+	updateableComponents []Updateable
+	drawableComponents   []Drawable
 }
 
 // "static assert" that ActorBase implements Actor
@@ -61,7 +61,7 @@ var _ Actor = (*ActorBase)(nil)
 var _ Component = (*ActorBase)(nil)
 
 func (a *ActorBase) reset() {
-	a.tickableComponents = nil
+	a.updateableComponents = nil
 	a.drawableComponents = nil
 }
 func (a *ActorBase) SetOwner(o Component) {
@@ -87,8 +87,8 @@ func (a *ActorBase) BeginPlay() {
 			if playable, ok := component.(Playable); ok {
 				playable.BeginPlay()
 			}
-			if tickable, ok := component.(Tickable); ok {
-				a.tickableComponents = append(a.tickableComponents, tickable)
+			if updateable, ok := component.(Updateable); ok {
+				a.updateableComponents = append(a.updateableComponents, updateable)
 			}
 			if drawable, ok := component.(Drawable); ok {
 				a.drawableComponents = append(a.drawableComponents, drawable)
@@ -103,9 +103,9 @@ func (a *ActorBase) GetTransform() *Transform {
 	return &a.Transform
 }
 
-func (a *ActorBase) Tick(deltaseconds float64) {
-	for _, tickable := range a.tickableComponents {
-		tickable.Tick(deltaseconds)
+func (a *ActorBase) Update() {
+	for _, updateable := range a.updateableComponents {
+		updateable.Update()
 	}
 }
 

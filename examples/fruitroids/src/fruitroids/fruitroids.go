@@ -27,7 +27,7 @@ func (g *Fruitroids) Draw(screen *ebiten.Image) {
 
 func (g *Fruitroids) Update() error {
 	if g.World != nil {
-		g.World.Tick(1 / 60.0)
+		g.World.Update()
 	}
 	return nil
 }

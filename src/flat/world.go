@@ -7,7 +7,7 @@ import (
 
 type World struct {
 	ActorBase
-	tickables        []Tickable
+	updateables      []Updateable
 	drawables        []Drawable
 	PersistentActors []Actor
 }
@@ -19,7 +19,7 @@ func NewWorld() *World {
 }
 
 func (w *World) reset() {
-	w.tickables = nil
+	w.updateables = nil
 	w.drawables = nil
 }
 
@@ -38,8 +38,8 @@ func (w *World) BeginPlay() {
 }
 
 func (w *World) AddToWorld(actor Actor) {
-	if tickable, ok := actor.(Tickable); ok {
-		w.tickables = append(w.tickables, tickable)
+	if updateable, ok := actor.(Updateable); ok {
+		w.updateables = append(w.updateables, updateable)
 	}
 	if drawable, ok := actor.(Drawable); ok {
 		w.drawables = append(w.drawables, drawable)
@@ -49,9 +49,9 @@ func (w *World) AddToWorld(actor Actor) {
 	}
 }
 
-func (w *World) Tick(deltaseconds float64) {
-	for _, tickable := range w.tickables {
-		tickable.Tick(deltaseconds)
+func (w *World) Update() {
+	for _, updateable := range w.updateables {
+		updateable.Update()
 	}
 }
 

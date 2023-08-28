@@ -22,13 +22,14 @@ func (s *Ship) BeginPlay() {
 	s.velocity = vector3.Vector3{}
 }
 
-func (s *Ship) Tick(deltaseconds float64) {
-	s.ActorBase.Tick(deltaseconds)
-	s.handleInput(deltaseconds)
-	s.updatePhysics(deltaseconds)
+func (s *Ship) Update() {
+	s.ActorBase.Update()
+	s.handleInput()
+	s.updatePhysics()
 }
 
-func (s *Ship) handleInput(deltaseconds float64) {
+func (s *Ship) handleInput() {
+	deltaseconds := flat.FrameTime()
 	isDown := func(key ebiten.Key) bool { return inpututil.KeyPressDuration(key) > 0 }
 	if isDown(ebiten.KeyArrowLeft) {
 		s.Transform.AddRotation(-s.RotationRate * deltaseconds)
@@ -57,8 +58,9 @@ func (s *Ship) handleInput(deltaseconds float64) {
 	}
 }
 
-func (s *Ship) updatePhysics(deltaseconds float64) {
+func (s *Ship) updatePhysics() {
 	// move along our velocity
+	deltaseconds := flat.FrameTime()
 	v := s.velocity.MulScalar(deltaseconds)
 	s.Transform.Location = *s.Transform.Location.Add(v)
 }

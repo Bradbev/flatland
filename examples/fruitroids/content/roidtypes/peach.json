@@ -19,6 +19,23 @@
               "Path": "images/peach.json"
             }
           }
+        },
+        {
+          "Type": "github.com/bradbev/flatland/examples/fruitroids/src/fruitroids.CircleCollisionComponent",
+          "Parent": "",
+          "Inner": {
+            "CollisionGroup": "roid",
+            "ComponentBase": {
+              "Transform": {
+                "Location": {
+                  "Y": 6
+                },
+                "ScaleX": 1,
+                "ScaleY": 1
+              }
+            },
+            "Radius": 69
+          }
         }
       ],
       "Transform": {

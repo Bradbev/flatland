@@ -12,6 +12,10 @@ type Roid struct {
 	rotationDelta float64
 }
 
+func (r *Roid) BeginPlay() {
+	r.ActorBase.BeginPlay(r)
+}
+
 func (r *Roid) Update() {
 	r.ActorBase.Update()
 	r.updatePhysics()

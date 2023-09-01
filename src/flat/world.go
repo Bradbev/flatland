@@ -3,10 +3,10 @@ package flat
 import (
 	"github.com/bradbev/flatland/src/asset"
 	"github.com/hajimehoshi/ebiten/v2"
+	"golang.org/x/exp/slices"
 )
 
 type World struct {
-	ActorBase
 	updateables      []Updateable
 	drawables        []Drawable
 	PersistentActors []Actor
@@ -46,6 +46,19 @@ func (w *World) AddToWorld(actor Actor) {
 	}
 	if playable, ok := actor.(Playable); ok {
 		playable.BeginPlay()
+	}
+}
+
+func (w *World) RemoveFromWorld(actor Actor) {
+	if updateable, ok := actor.(Updateable); ok {
+		w.updateables = slices.DeleteFunc(w.updateables, func(u Updateable) bool {
+			return u == updateable
+		})
+	}
+	if drawable, ok := actor.(Drawable); ok {
+		w.drawables = slices.DeleteFunc(w.drawables, func(d Drawable) bool {
+			return d == drawable
+		})
 	}
 }
 

@@ -51,7 +51,7 @@ type G struct {
 }
 
 func (g *G) Draw(screen *ebiten.Image) {
-	ebitenutil.DebugPrintAt(screen, fmt.Sprintf("TPS: %.3f\nFPS: %.2f\n", ebiten.ActualTPS(), ebiten.ActualFPS()), 11, 20)
+	ebitenutil.DebugPrintAt(screen, fmt.Sprintf("TPS: %.3f (%dx%d)\nFPS: %.2f\n", ebiten.ActualTPS(), g.w, g.h, ebiten.ActualFPS()), 11, 20)
 	g.mgr.Draw(screen)
 }
 

@@ -97,7 +97,7 @@ func ApplyTransform(transform *Transform, geom *ebiten.GeoM) {
 func ApplyComponentTransforms(tr Transformer, geom *ebiten.GeoM) {
 	ApplyTransform(tr.GetTransform(), geom)
 	if comp, ok := tr.(Component); ok {
-		if owningTransformer, ok := comp.GetOwner().(Transformer); ok {
+		if owningTransformer, ok := comp.Owner().(Transformer); ok {
 			ApplyComponentTransforms(owningTransformer, geom)
 		}
 	}

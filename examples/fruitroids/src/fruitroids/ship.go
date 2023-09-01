@@ -18,7 +18,7 @@ type Ship struct {
 }
 
 func (s *Ship) BeginPlay() {
-	s.ActorBase.BeginPlay()
+	s.ActorBase.BeginPlay(s)
 	s.velocity = vector3.Vector3{}
 }
 

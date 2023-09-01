@@ -10,17 +10,7 @@
     },
     "ToSpawn": [
       {
-        "CountMax": 6,
-        "CountMin": 1,
-        "RoidType": {
-          "Type": "github.com/bradbev/flatland/examples/fruitroids/src/fruitroids.Roid",
-          "Path": "roidtypes/pineapple.json"
-        },
-        "RotationMax": 9,
-        "SpeedMax": 33
-      },
-      {
-        "CountMax": 3,
+        "CountMax": 4,
         "CountMin": 1,
         "RoidType": {
           "Type": "github.com/bradbev/flatland/examples/fruitroids/src/fruitroids.Roid",
@@ -28,6 +18,16 @@
         },
         "RotationMax": 3,
         "SpeedMax": 21
+      },
+      {
+        "CountMax": 2,
+        "CountMin": 0,
+        "RoidType": {
+          "Type": "github.com/bradbev/flatland/examples/fruitroids/src/fruitroids.Roid",
+          "Path": "roidtypes/pineapple.json"
+        },
+        "RotationMax": 7,
+        "SpeedMax": 11
       }
     ]
   }

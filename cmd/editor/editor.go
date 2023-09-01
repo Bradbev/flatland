@@ -82,6 +82,9 @@ type actorTest struct {
 	ActorBaseName string
 }
 
+func (a *actorTest) BeginPlay() {
+	a.ActorBase.BeginPlay(a)
+}
 func (a *actorTest) TestTab() {}
 
 type testInterfaceEditor interface {

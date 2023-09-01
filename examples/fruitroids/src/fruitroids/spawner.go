@@ -22,6 +22,7 @@ type LevelSpawn struct {
 }
 
 func (l *LevelSpawn) BeginPlay() {
+	l.ActorBase.BeginPlay(l)
 	if ActiveWorld == nil {
 		return
 	}

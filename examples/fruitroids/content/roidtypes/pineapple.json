@@ -19,6 +19,40 @@
               "Path": "images/pineapple.json"
             }
           }
+        },
+        {
+          "Type": "github.com/bradbev/flatland/examples/fruitroids/src/fruitroids.CircleCollisionComponent",
+          "Parent": "",
+          "Inner": {
+            "CollisionGroup": "roid",
+            "ComponentBase": {
+              "Transform": {
+                "Location": {
+                  "Y": -46
+                },
+                "ScaleX": 1,
+                "ScaleY": 1
+              }
+            },
+            "Radius": 61
+          }
+        },
+        {
+          "Type": "github.com/bradbev/flatland/examples/fruitroids/src/fruitroids.CircleCollisionComponent",
+          "Parent": "",
+          "Inner": {
+            "CollisionGroup": "roid",
+            "ComponentBase": {
+              "Transform": {
+                "Location": {
+                  "Y": 35
+                },
+                "ScaleX": 1,
+                "ScaleY": 1
+              }
+            },
+            "Radius": 72
+          }
         }
       ],
       "Transform": {

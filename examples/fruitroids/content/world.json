@@ -10,12 +10,16 @@
     },
     "PersistentActors": [
       {
-        "Type": "github.com/bradbev/flatland/examples/fruitroids/src/fruitroids.Ship",
-        "Path": "ship3.json"
+        "Type": "github.com/bradbev/flatland/examples/fruitroids/src/fruitroids.PhysicsCollisionManager",
+        "Path": "physicsmanager.json"
       },
       {
         "Type": "github.com/bradbev/flatland/examples/fruitroids/src/fruitroids.LevelSpawn",
         "Path": "spawner.json"
+      },
+      {
+        "Type": "github.com/bradbev/flatland/examples/fruitroids/src/fruitroids.Ship",
+        "Path": "ship3.json"
       }
     ]
   }

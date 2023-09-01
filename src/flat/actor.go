@@ -16,7 +16,7 @@ type Component interface {
 	SetComponents([]Component)
 	GetComponents() []Component
 	SetOwner(owner Component)
-	GetOwner() Component
+	Owner() Component
 }
 
 type Transformer interface {
@@ -37,14 +37,14 @@ type Playable interface {
 
 type ComponentBase struct {
 	Transform Transform
-	Owner     Component
+	owner     Component
 	Children  []Component
 }
 
 var _ Component = (*ComponentBase)(nil)
 
-func (c *ComponentBase) SetOwner(owner Component)        { c.Owner = owner }
-func (c *ComponentBase) GetOwner() Component             { return c.Owner }
+func (c *ComponentBase) SetOwner(owner Component)        { c.owner = owner }
+func (c *ComponentBase) Owner() Component                { return c.owner }
 func (c *ComponentBase) SetComponents(comps []Component) { c.Children = comps }
 func (c *ComponentBase) GetComponents() []Component      { return c.Children }
 func (c *ComponentBase) GetTransform() *Transform        { return &c.Transform }
@@ -54,6 +54,7 @@ type ActorBase struct {
 	Components           []Component `flat:"inline"`
 	updateableComponents []Updateable
 	drawableComponents   []Drawable
+	beginPlayWasCalled   bool
 }
 
 // "static assert" that ActorBase implements Actor
@@ -63,25 +64,27 @@ var _ Component = (*ActorBase)(nil)
 func (a *ActorBase) reset() {
 	a.updateableComponents = nil
 	a.drawableComponents = nil
+	a.beginPlayWasCalled = false
 }
 func (a *ActorBase) SetOwner(o Component) {
 	if o != nil {
 		panic("Cannot SetOwner on an Actor")
 	}
 }
-func (a *ActorBase) GetOwner() Component             { return nil }
+func (a *ActorBase) Owner() Component                { return nil }
 func (a *ActorBase) SetComponents(comps []Component) { a.Components = comps }
 func (a *ActorBase) GetComponents() []Component      { return a.Components }
 
-func (a *ActorBase) BeginPlay() {
+func (a *ActorBase) BeginPlay(rootParent Actor) {
 	a.reset()
+	a.beginPlayWasCalled = true
 	for _, component := range a.Components {
 		if component == nil {
 			continue
 		}
 		WalkComponents(component, func(component, parent Component) {
 			if parent == nil {
-				parent = a
+				parent = rootParent
 			}
 			component.SetOwner(parent)
 			if playable, ok := component.(Playable); ok {
@@ -104,6 +107,7 @@ func (a *ActorBase) GetTransform() *Transform {
 }
 
 func (a *ActorBase) Update() {
+	Assert(a.beginPlayWasCalled, "BeginPlay(actor) must be called before update (usually in your own BeginPlay) if you wish to use ActorBase")
 	for _, updateable := range a.updateableComponents {
 		updateable.Update()
 	}

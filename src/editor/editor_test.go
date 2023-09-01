@@ -15,6 +15,12 @@ type testActor struct {
 	More string
 }
 
+// Actors that embed flat.ActorBase are required to implement BeginPlay
+// and call ActorBase.BeginPlay
+func (ta *testActor) BeginPlay() {
+	ta.ActorBase.BeginPlay(ta)
+}
+
 func TestImplements(t *testing.T) {
 	//a := flat.Actor(&testActor{})
 	a := new(flat.Actor)

@@ -18,6 +18,7 @@ type Fruitroids struct {
 var ActiveWorld *Fruitroids
 
 func (g *Fruitroids) Draw(screen *ebiten.Image) {
+
 	if g.World != nil {
 		g.World.Draw(screen)
 	}
@@ -43,4 +44,6 @@ func RegisterFruitroidTypes() {
 	asset.RegisterAsset(Roid{})
 	asset.RegisterAsset(SpawnConfig{})
 	asset.RegisterAsset(LevelSpawn{})
+	asset.RegisterAsset(CircleCollisionComponent{})
+	asset.RegisterAsset(PhysicsCollisionManager{})
 }

@@ -26,6 +26,7 @@ func RegisterAllFlatEditors(edit *editor.ImguiEditor) {
 	edit.AddType(new(flat.Actor), actorEd)
 	// For the case or ActorBase, it will also match the interface, and we do not want that
 	edit.AddType(new(flat.ActorBase), actorBaseEd)
+	edit.AddType(new(flat.Transform), transformEd)
 }
 
 type imageEdContext struct {

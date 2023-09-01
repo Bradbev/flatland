@@ -1,6 +1,10 @@
 package flat
 
-import "github.com/hajimehoshi/ebiten/v2"
+import (
+	"log"
+
+	"github.com/hajimehoshi/ebiten/v2"
+)
 
 func SliceToSet[T comparable](s []T) map[T]struct{} {
 	ret := map[T]struct{}{}
@@ -12,4 +16,10 @@ func SliceToSet[T comparable](s []T) map[T]struct{} {
 
 func FrameTime() float64 {
 	return 1.0 / float64(ebiten.TPS())
+}
+
+func Assert(expr bool, message string) {
+	if !expr {
+		log.Fatal(message)
+	}
 }

@@ -20,10 +20,30 @@
               "Path": "apple.json"
             }
           }
+        },
+        {
+          "Type": "github.com/bradbev/flatland/examples/fruitroids/src/fruitroids.CircleCollisionComponent",
+          "Parent": "",
+          "Inner": {
+            "CollisionGroup": "ship",
+            "ComponentBase": {
+              "Owner": {
+                "Type": "github.com/bradbev/flatland/examples/fruitroids/src/fruitroids.Ship",
+                "Path": "ship3.json"
+              },
+              "Transform": {
+                "Location": {
+                  "Y": 8
+                },
+                "ScaleX": 1,
+                "ScaleY": 1
+              }
+            },
+            "Radius": 32
+          }
         }
       ],
       "Transform": {
-        "Rotation": 129,
         "ScaleX": 0.5,
         "ScaleY": 0.5
       }

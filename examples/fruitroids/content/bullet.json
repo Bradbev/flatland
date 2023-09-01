@@ -1,8 +1,7 @@
 {
-  "Type": "github.com/bradbev/flatland/examples/fruitroids/src/fruitroids.Ship",
+  "Type": "github.com/bradbev/flatland/examples/fruitroids/src/fruitroids.Bullet",
   "Parent": "",
   "Inner": {
-    "Acceleration": 30,
     "ActorBase": {
       "Components": [
         {
@@ -11,13 +10,13 @@
           "Inner": {
             "ComponentBase": {
               "Transform": {
-                "ScaleX": 1,
-                "ScaleY": 1
+                "ScaleX": 0.009999999776482582,
+                "ScaleY": 0.009999999776482582
               }
             },
             "Image": {
               "Type": "github.com/bradbev/flatland/src/flat.Image",
-              "Path": "apple.json"
+              "Path": "banana.json"
             }
           }
         },
@@ -25,31 +24,25 @@
           "Type": "github.com/bradbev/flatland/examples/fruitroids/src/fruitroids.CircleCollisionComponent",
           "Parent": "",
           "Inner": {
-            "CollisionGroup": "ship",
+            "CollisionGroup": "bullet",
             "ComponentBase": {
               "Transform": {
-                "Location": {
-                  "Y": 8
-                },
                 "ScaleX": 1,
                 "ScaleY": 1
               }
             },
-            "Radius": 32
+            "Radius": 8
           }
         }
       ],
       "Transform": {
-        "Rotation": 193.5,
-        "ScaleX": 0.5,
-        "ScaleY": 0.5
+        "Rotation": 10705.383333333233,
+        "ScaleX": 1,
+        "ScaleY": 1
       }
     },
-    "BulletType": {
-      "Type": "github.com/bradbev/flatland/examples/fruitroids/src/fruitroids.Bullet",
-      "Path": "bullet.json"
-    },
-    "MaxVelocity": 200,
-    "RotationRate": 270
+    "FireDelay": 0.20000000298023224,
+    "RotationRate": 690,
+    "Velocity": 300
   }
 }

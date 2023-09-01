@@ -1,6 +1,10 @@
 package fruitroids
 
 import (
+	"fmt"
+	"time"
+
+	"github.com/bradbev/flatland/src/asset"
 	"github.com/bradbev/flatland/src/flat"
 	"github.com/deeean/go-vector/vector3"
 
@@ -13,8 +17,10 @@ type Ship struct {
 	RotationRate float64
 	Acceleration float64
 	MaxVelocity  float64
+	BulletType   *Bullet
 
-	velocity vector3.Vector3
+	velocity     vector3.Vector3
+	lastFireTime time.Time
 }
 
 func (s *Ship) BeginPlay() {
@@ -54,7 +60,19 @@ func (s *Ship) handleInput() {
 		}
 	}
 	if isDown(ebiten.KeySpace) {
+		if time.Since(s.lastFireTime) < time.Duration(float64(time.Second)*s.BulletType.FireDelay) {
+			return
+		}
+		s.lastFireTime = time.Now()
 		// fire
+		b, err := asset.NewInstance(s.BulletType)
+		if err != nil {
+			fmt.Println("terrible")
+		}
+		bullet := b.(*Bullet)
+		bullet.Transform = s.Transform
+		ActiveWorld.World.AddToWorld(bullet)
+		bullet.SetDirection(s.Transform.Rotation)
 	}
 }
 

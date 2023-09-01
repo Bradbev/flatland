@@ -46,4 +46,5 @@ func RegisterFruitroidTypes() {
 	asset.RegisterAsset(LevelSpawn{})
 	asset.RegisterAsset(CircleCollisionComponent{})
 	asset.RegisterAsset(PhysicsCollisionManager{})
+	asset.RegisterAsset(Bullet{})
 }

@@ -12,6 +12,10 @@
       {
         "Bucket1": "ship",
         "Bucket2": "roid"
+      },
+      {
+        "Bucket1": "bullet",
+        "Bucket2": "roid"
       }
     ]
   }

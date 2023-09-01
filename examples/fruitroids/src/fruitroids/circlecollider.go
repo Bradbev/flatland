@@ -27,6 +27,9 @@ func (c *CircleCollisionComponent) BeginPlay() {
 }
 
 func (c *CircleCollisionComponent) Draw(screen *ebiten.Image) {
+	if !c.ShowDebug {
+		return
+	}
 	geom := ebiten.GeoM{}
 	flat.ApplyComponentTransforms(c, &geom)
 
@@ -51,10 +54,13 @@ func (c *CircleCollisionComponent) CheckOverlap(other *CircleCollisionComponent)
 			r.velocity = vector3.Vector3{}
 		}
 		if r, ok := other.Owner().(*Roid); ok {
-			ActiveWorld.World.RemoveFromWorld(r)
-			gPhysicsManager.Remove(other)
-			r.velocity = vector3.Vector3{}
-			r.rotationDelta = 0
+			if main, ok := c.Owner().(*Bullet); ok {
+				ActiveWorld.World.RemoveFromWorld(r)
+				gPhysicsManager.Remove(other)
+
+				ActiveWorld.World.RemoveFromWorld(main)
+				gPhysicsManager.Remove(c)
+			}
 		}
 	}
 }

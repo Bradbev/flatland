@@ -12,6 +12,15 @@ import (
 	"github.com/hajimehoshi/ebiten/v2/inpututil"
 )
 
+// TOUR:Fruitroids 4
+// The Ship struct is our player controlled object.
+// It embeds the flat.ActorBase struct.  This mean two things
+// 1) The flat.Actor interface is satisfied by Ship
+// 2) Ship.BeginPlay *must* call ActorBase.BeginPlay(actor)
+// Actors can have sub components added to them.  The ship3.json
+// asset has an Image component and a CircleCollisionComponent, those
+// components take care of showing an image and colliding into things.
+// The exported fields of this struct will be editable in the FruitEditor.
 type Ship struct {
 	flat.ActorBase
 	RotationRate float64

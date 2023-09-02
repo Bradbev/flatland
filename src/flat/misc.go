@@ -1,7 +1,9 @@
 package flat
 
 import (
+	"fmt"
 	"log"
+	"runtime/debug"
 
 	"github.com/hajimehoshi/ebiten/v2"
 )
@@ -21,5 +23,19 @@ func FrameTime() float64 {
 func Assert(expr bool, message string) {
 	if !expr {
 		log.Fatal(message)
+	}
+}
+
+// Errorf is just like fmt.Errorf, but appends a stack trace to the output
+func Errorf(format string, args ...any) error {
+	str := fmt.Sprintf(format, args...)
+	stack := debug.Stack()
+	return fmt.Errorf("%s\n------\n%s", str, stack)
+}
+
+// Check will panic if e is not nil, with e being passed to panic
+func Check(e error) {
+	if e != nil {
+		panic(e)
 	}
 }

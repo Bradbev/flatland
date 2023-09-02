@@ -2,16 +2,10 @@
   "Type": "github.com/bradbev/flatland/src/flat.World",
   "Parent": "",
   "Inner": {
-    "ActorBase": {
-      "Transform": {
-        "ScaleX": 1,
-        "ScaleY": 1
-      }
-    },
     "PersistentActors": [
       {
         "Type": "github.com/bradbev/flatland/examples/fruitroids/src/fruitroids.PhysicsCollisionManager",
-        "Path": "physicsmanager.json"
+        "Path": "physicsManager.json"
       },
       {
         "Type": "github.com/bradbev/flatland/examples/fruitroids/src/fruitroids.LevelSpawn",

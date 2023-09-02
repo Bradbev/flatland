@@ -6,6 +6,13 @@ To run the editor `go run cmd/editor/editor.go`
 
 To run the game `go run cmd/fruitroids/main.go`
 
+Fruitroids also runs on the web!  You will need to install wasmserve  
+`go install github.com/hajimehoshi/wasmserve@latest`   
+then   
+`cd cmd/fruitroids/`  
+`wasmserve`  
+Open `localhost:8080`
+
 # Package Dependency
 The dependency tree looks like
 cmd/editor

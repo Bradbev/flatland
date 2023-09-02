@@ -43,10 +43,12 @@ func (a *AutoComplete) InputText(label string, s *string, onActivated func() []s
 		ImGuiWindowFlags_ChildWindow := imgui.WindowFlags(1 << 24) // don't use (internal)
 		flags := imgui.WindowFlagsNoTitleBar | imgui.WindowFlagsNoMove | imgui.WindowFlagsNoResize | ImGuiWindowFlags_ChildWindow
 		if imgui.BeginPopupV("##popup", flags) {
-			for _, item := range a.lowerItems {
-				if strings.Contains(item, lowerInput) {
+			for i, lowerItem := range a.lowerItems {
+				item := a.items[i]
+				if strings.Contains(lowerItem, lowerInput) {
 					if imgui.Selectable(item) {
 						imgui.ClearActiveID()
+						// we DO NOT want to mess with case when saving
 						*s = item
 						result = true
 					}

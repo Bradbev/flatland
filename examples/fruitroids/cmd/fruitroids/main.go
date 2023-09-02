@@ -2,8 +2,9 @@ package main
 
 import (
 	"fmt"
-	"os"
+	"io/fs"
 
+	content "github.com/bradbev/flatland/examples/fruitroids"
 	"github.com/bradbev/flatland/examples/fruitroids/src/fruitroids"
 	"github.com/bradbev/flatland/src/asset"
 	"github.com/bradbev/flatland/src/flat"
@@ -15,17 +16,18 @@ func main() {
 	ebiten.SetWindowSize(1024, 768)
 	ebiten.SetWindowResizingMode(ebiten.WindowResizingModeEnabled)
 
-	gg := &fruitroids.Fruitroids{}
-
-	fsysRead := os.DirFS("./content")
+	// embed content to the binary so wasm distribution works
+	fsysRead, _ := fs.Sub(content.Content, "content")
 	asset.RegisterFileSystem(fsysRead, 0)
 
 	flat.RegisterAllFlatTypes()
 	fruitroids.RegisterFruitroidTypes()
 	world, err := asset.Load("world.json")
-	fruitroids.ActiveWorld = gg
 	fmt.Println(err)
+
+	gg := &fruitroids.Fruitroids{}
 	gg.World = world.(*flat.World)
+	fruitroids.ActiveWorld = gg
 	gg.World.BeginPlay()
 
 	ebiten.RunGame(gg)

@@ -3,6 +3,7 @@ package asset
 import (
 	"encoding/json"
 	"fmt"
+	"reflect"
 	"testing"
 
 	"github.com/stretchr/testify/assert"
@@ -225,4 +226,27 @@ func TestDefaultInitializer(t *testing.T) {
 	assert.True(t, a.A.DidInit)
 	assert.True(t, a.B.DidInit)
 	assert.True(t, a.C.(*testDefInit).DidInit)
+}
+
+type TestTags struct {
+	A int `flat:"inline   ;  key:value   ;   desc:A long description ;  last:last value" other:"other value"`
+}
+
+func TestTagExtraction(t *testing.T) {
+	sf, _ := reflect.TypeOf(TestTags{}).FieldByName("A")
+	table := []struct {
+		key           string
+		expectedValue string
+	}{
+		{"inline", ""},
+		{"key", "value"},
+		{"desc", "A long description"},
+		{"last", "last value"},
+	}
+
+	for _, entry := range table {
+		value, exists := GetFlatTag(&sf, entry.key)
+		assert.True(t, exists, "Key %s must exist", entry.key)
+		assert.Equal(t, entry.expectedValue, value)
+	}
 }

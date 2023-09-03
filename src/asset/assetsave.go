@@ -119,15 +119,12 @@ func (a *assetManagerImpl) buildJsonToSaveInternal(obj any, context *buildJsonCo
 	switch t.Kind() {
 	case reflect.Pointer:
 		if sf := context.Peek(); sf != nil {
-			tag := sf.Tag.Get("flat")
-			fmt.Println(tag)
-			if tag == "inline" {
+			if _, inline := GetFlatTag(sf, "inline"); inline {
 				container, err := a.makeSavedAssetContainer(obj)
 				if err != nil {
 					panic(err)
 				}
 				return container
-				//return a.buildJsonToSaveInternal(v, context)
 			}
 		}
 		// save references to known assets

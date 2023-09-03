@@ -107,13 +107,13 @@ type EditTest struct {
 	hidden      float32
 
 	// Path is filtered using the tag "filter" to files containing the text "json"
-	Path asset.Path `flat:"Path (json filter)" filter:"json"`
+	Path asset.Path `flat:"desc:Path (json filter) ; filter:json" filter:"json"`
 
 	// NestedImmediate is renamed using the tag "flat"
 	NestedImmediate struct {
 		NestedFloat  float32
 		NestedFloat2 float32
-	} `flat:"Override field name from Nested Immediate"`
+	} `flat:"desc:Override field name from Nested Immediate"`
 
 	NestedIndirectField        nestedIndirect
 	SupportNestedCustomEditors flat.Image

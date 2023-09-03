@@ -377,7 +377,7 @@ func StructEd(context *TypeEditContext, value reflect.Value) error {
 
 						{ // Handle field name overrides
 							fieldName := structField.Name
-							if override, ok := structField.Tag.Lookup("flat"); ok {
+							if override, ok := asset.GetFlatTag(&structField, "desc"); ok {
 								fieldName = override
 							}
 							imgui.Text(fieldName)
@@ -410,7 +410,7 @@ func getNodeName(context *TypeEditContext, value reflect.Value) string {
 	// wanted to override the name
 	if sf := context.StructField(); sf != nil {
 		nodeName = sf.Name
-		if override, ok := sf.Tag.Lookup("flat"); ok {
+		if override, ok := asset.GetFlatTag(sf, "desc"); ok {
 			nodeName = override
 		}
 	}
@@ -544,9 +544,8 @@ func pathEd(context *TypeEditContext, value reflect.Value) error {
 	onActivated := func() []string {
 		filters := []string{}
 		if sf := context.StructField(); sf != nil {
-			val, _ := sf.Tag.Lookup("filter")
+			val, _ := asset.GetFlatTag(sf, "filter")
 			filters = strings.Split(strings.ToLower(val), ",")
-
 		}
 
 		var items []string

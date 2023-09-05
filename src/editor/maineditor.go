@@ -6,10 +6,12 @@ import (
 	"io/fs"
 	"os"
 	"path/filepath"
+	"reflect"
 	"strings"
 
 	"github.com/bradbev/flatland/src/asset"
 	"github.com/bradbev/flatland/src/editor/edgui"
+	"github.com/bradbev/flatland/src/flat"
 
 	"github.com/gabstv/ebiten-imgui/renderer"
 	"github.com/hajimehoshi/ebiten/v2"
@@ -33,7 +35,10 @@ type ImguiEditor struct {
 
 	menu menuManager
 
+	// The drawables that the editor will show
 	drawables []Drawable
+
+	knownEnums enumInfo
 
 	pie pieManager
 
@@ -67,6 +72,10 @@ func New(path string, manager *renderer.Manager) *ImguiEditor {
 		// fontAtlas is at ID 1, start high enough to avoid other IDs
 		nextTextureID:    100,
 		embeddedTextures: map[any]embeddedTexture{},
+
+		knownEnums: enumInfo{
+			enums: map[reflect.Type]map[int32]string{},
+		},
 	}
 	ed.typeEditor.ed = ed
 	ed.pie.ed = ed
@@ -242,6 +251,21 @@ func (ed *ImguiEditor) createMenu(m *menuManager) {
 			i("Start PIE", func() { ed.pie.StartGame() }),
 		},
 	})
+}
+
+func (ed *ImguiEditor) RegisterEnum(mapping map[any]string) {
+	var typ reflect.Type
+	first := true
+	for key := range mapping {
+		if first {
+			typ = reflect.TypeOf(key)
+			first = false
+		} else {
+			t := reflect.TypeOf(key)
+			flat.Assert(t == typ, "All keys in enum must be the same type")
+		}
+	}
+	ed.knownEnums.RegisterEnum(typ, mapping)
 }
 
 type editorWriteFS struct {

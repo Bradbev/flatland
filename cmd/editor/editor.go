@@ -50,11 +50,14 @@ func main() {
 	/*
 		asset.Save("testedit.json", &defaultTestObject)
 		gg.ed.EditAsset("testedit.json")
-		asset.Save("childedit.json", &defaultTestObjectChild)
-		asset.SetParent(&defaultTestObjectChild, &defaultTestObject)
-		gg.ed.EditAsset("childedit.json")
+
+			asset.Save("childedit.json", &defaultTestObjectChild)
+			asset.SetParent(&defaultTestObjectChild, &defaultTestObject)
+			gg.ed.EditAsset("childedit.json")
+
+			gg.ed.EditAsset("actorTest.json")
 	*/
-	gg.ed.EditAsset("actorTest.json")
+	gg.ed.EditAsset("font.json")
 
 	menu := edgui.Menu{
 		Name: "Custom Item",
@@ -69,6 +72,12 @@ func main() {
 		},
 	}
 	gg.ed.AddMenu(menu)
+
+	gg.ed.RegisterEnum(map[any]string{
+		First:    "First",
+		Second:   "Second",
+		Whatever: "Whatever",
+	})
 
 	ebiten.RunGame(gg)
 }
@@ -91,9 +100,18 @@ type testInterfaceEditor interface {
 	TestTab()
 }
 
+type TestEnum int8
+
+const (
+	First TestEnum = iota
+	Second
+	Whatever
+)
+
 // EditTest demonstrates all the ways that the editor can
 // edit types.
 type EditTest struct {
+	TestEnum    TestEnum
 	AssetType   asset.Asset // support setting Assets
 	Flt         float32
 	Slice       []int
@@ -120,7 +138,7 @@ type EditTest struct {
 }
 
 var defaultTestObject = EditTest{
-	Slice: []int{7, 4, 5, 6},
+	Slice: []int{7, 6},
 }
 var defaultTestObjectChild = EditTest{}
 

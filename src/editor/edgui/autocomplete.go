@@ -34,7 +34,9 @@ func (a *AutoComplete) InputText(label string, s *string, onActivated func() []s
 
 	if isActivated {
 		imgui.OpenPopup("##popup")
-		a.SetItems(onActivated())
+		if onActivated != nil {
+			a.SetItems(onActivated())
+		}
 	}
 
 	{

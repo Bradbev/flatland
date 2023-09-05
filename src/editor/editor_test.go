@@ -6,6 +6,7 @@ import (
 	"testing"
 
 	"github.com/bradbev/flatland/src/flat"
+	"golang.org/x/image/font"
 
 	"github.com/stretchr/testify/assert"
 )
@@ -110,4 +111,20 @@ func TestTypeEditorInterfacesMustHaveFuncs(t *testing.T) {
 			return nil
 		})
 	}, "Interfaces that can be edited must have at least one function on them, or they will catch every type")
+}
+
+func TestEnum(t *testing.T) {
+	info := enumInfo{enums: map[reflect.Type]map[int32]string{}}
+
+	typ := reflect.TypeOf(font.HintingNone)
+	info.RegisterEnum(typ, map[any]string{
+		font.HintingNone:     "None",
+		font.HintingVertical: "Vertical",
+		font.HintingFull:     "Full",
+	})
+
+	assert.True(t, info.IsKnown(typ))
+	assert.Equal(t, int32(font.HintingNone), info.StringToValue(typ, "None"))
+	assert.Equal(t, "None", info.ValueToString(typ, int32(font.HintingNone)))
+	assert.Equal(t, []string{"Full", "None", "Vertical"}, info.Strings(typ))
 }

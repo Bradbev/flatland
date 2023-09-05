@@ -27,7 +27,7 @@ type TypeEditContext struct {
 	assetPath string
 
 	// editContext is where GetContext saves its data
-	editContext map[unsafe.Pointer]map[any]any
+	editContext map[unsafe.Pointer]map[reflect.Type]any
 
 	// the stack of struct fields so nested editors
 	// can see what their field description is
@@ -40,7 +40,7 @@ func NewTypeEditContext(ed *ImguiEditor, assetPath string) *TypeEditContext {
 	return &TypeEditContext{
 		Ed:               ed,
 		assetPath:        assetPath,
-		editContext:      map[unsafe.Pointer]map[any]any{},
+		editContext:      map[unsafe.Pointer]map[reflect.Type]any{},
 		structFieldStack: []*reflect.StructField{},
 	}
 }
@@ -99,19 +99,20 @@ func GetContext[T any](context *TypeEditContext, key reflect.Value) (*T, bool) {
 	contexts, contextsExists := context.editContext[ptr]
 	if !contextsExists {
 		// first level map doesn't exist yet
-		contexts = map[any]any{}
+		contexts = map[reflect.Type]any{}
 		context.editContext[ptr] = contexts
 	}
 	var zeroT T
+	tTyp := reflect.TypeOf(zeroT)
 
 	// found the type/value context
-	if context, exists := contexts[zeroT]; exists {
+	if context, exists := contexts[tTyp]; exists {
 		return context.(*T), false
 	}
 
 	// second level map doesn't exist
 	ret := new(T)
-	contexts[zeroT] = ret
+	contexts[tTyp] = ret
 	return ret, true
 }
 
@@ -199,10 +200,16 @@ func (e *typeEditor) EditValue(context *TypeEditContext, value reflect.Value) {
 		// we may have already calculated the edit function for this type
 		edFn, ok = e.cachedEditFuncs[fullName]
 		if !ok {
-			// see if there are interface functions that can handle this type
-			ptrToValue := value.Addr()
-			ifaceFns := e.gatherInterfaceEditorFuncs(ptrToValue)
-			edFn = e.customInterfaceEd(ifaceFns, fullName)
+			if e.ed.knownEnums.IsKnown(value.Type()) {
+				edFn = makeEnumEd(e.ed, value.Type())
+			}
+
+			if edFn == nil {
+				// see if there are interface functions that can handle this type
+				ptrToValue := value.Addr()
+				ifaceFns := e.gatherInterfaceEditorFuncs(ptrToValue)
+				edFn = makeCustomInterfaceEd(ifaceFns, fullName)
+			}
 
 			// always populate the cache, even if we made a nil fn
 			e.cachedEditFuncs[fullName] = edFn
@@ -282,7 +289,7 @@ func (e *typeEditor) gatherInterfaceEditorFuncs(value reflect.Value) []ifaceFnPa
 	return ret
 }
 
-func (e *typeEditor) customInterfaceEd(pairs []ifaceFnPair, typeName string) TypeEditorFn {
+func makeCustomInterfaceEd(pairs []ifaceFnPair, typeName string) TypeEditorFn {
 	if len(pairs) == 0 {
 		return nil
 	}
@@ -302,6 +309,35 @@ func (e *typeEditor) customInterfaceEd(pairs []ifaceFnPair, typeName string) Typ
 		return nil
 	}
 
+	return edFn
+}
+
+type enumEdContext struct {
+	comboIndex int32
+	comboItems []string
+}
+
+func makeEnumEd(ed *ImguiEditor, typ reflect.Type) TypeEditorFn {
+	if !ed.knownEnums.IsKnown(typ) {
+		return nil
+	}
+	edFn := func(context *TypeEditContext, value reflect.Value) error {
+		c, firstTime := GetContext[enumEdContext](context, value)
+		if firstTime {
+			c.comboItems = ed.knownEnums.Strings(typ)
+			name := ed.knownEnums.ValueToString(typ, int32(value.Int()))
+			c.comboIndex = int32(slices.Index(c.comboItems, name))
+		}
+		withID(value, func() {
+			if imgui.Combo("", &c.comboIndex, c.comboItems) {
+				name := c.comboItems[c.comboIndex]
+				enumValue := ed.knownEnums.StringToValue(typ, name)
+				value.SetInt(int64(enumValue))
+				context.SetChanged()
+			}
+		})
+		return nil
+	}
 	return edFn
 }
 
@@ -330,15 +366,17 @@ func interfaceEd(context *TypeEditContext, value reflect.Value) error {
 			}
 		}
 	}
-	c.auto.InputText("", &c.input, onActivated)
-	if c.input != c.lastInput { // need a better check here for "input entered"
-		c.lastInput = c.input
-		asset, err := asset.Load(asset.Path(c.input))
-		if err == nil && asset != nil {
-			value.Set(reflect.ValueOf(asset))
-			context.SetChanged()
+	withID(value, func() {
+		c.auto.InputText("", &c.input, onActivated)
+		if c.input != c.lastInput { // need a better check here for "input entered"
+			c.lastInput = c.input
+			asset, err := asset.Load(asset.Path(c.input))
+			if err == nil && asset != nil {
+				value.Set(reflect.ValueOf(asset))
+				context.SetChanged()
+			}
 		}
-	}
+	})
 	return nil
 }
 

@@ -32,16 +32,16 @@ func (a *assetEditWindow) Draw() error {
 	open := true
 	if imgui.BeginV(a.path, &open, 0) {
 		enabled := a.context.hasChanged
+		reload := false
 		edgui.WithDisabled(!enabled, func() {
 			imgui.SameLineV(0, imgui.WindowWidth()-180)
-			reload := false
 			if imgui.Button("Save") && enabled {
 				asset.Save(asset.Path(a.path), a.target)
 				a.context.hasChanged = false
 				reload = true
 			}
 			imgui.SameLine()
-			if (imgui.Button("Revert") || reload) && enabled {
+			if imgui.Button("Revert") {
 				asset.LoadWithOptions(asset.Path(a.path), asset.LoadOptions{ForceReload: true})
 				if playable, ok := a.target.(flat.Playable); ok {
 					playable.BeginPlay()
@@ -49,7 +49,17 @@ func (a *assetEditWindow) Draw() error {
 			}
 		})
 		imgui.SameLine()
-		if imgui.Button("Refresh") {
+		if imgui.Button("Refresh") || reload {
+			if postloader, ok := a.target.(asset.PostLoadingAsset); ok {
+				postloader.PostLoad()
+			}
+			if comp, ok := a.target.(flat.Component); ok {
+				flat.WalkComponents(comp, func(target, _ flat.Component) {
+					if postloader, ok := target.(asset.PostLoadingAsset); ok {
+						postloader.PostLoad()
+					}
+				})
+			}
 			if playable, ok := a.target.(flat.Playable); ok {
 				playable.BeginPlay()
 			}

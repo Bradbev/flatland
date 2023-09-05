@@ -17,20 +17,8 @@ import (
 type f64 = float64
 type f32 = float32
 
-func RegisterAllFlatEditors(edit *editor.ImguiEditor) {
-	// EXAMPLE: You can add your own custom editors for any type you choose,
-	// including primitive types.
-	edit.AddType(new(flat.Image), imageEd)
-
-	// Editors for interfaces are supported
-	edit.AddType(new(flat.Actor), actorEd)
-	// For the case or ActorBase, it will also match the interface, and we do not want that
-	edit.AddType(new(flat.ActorBase), actorBaseEd)
-	edit.AddType(new(flat.Transform), transformEd)
-}
-
 type imageEdContext struct {
-	lastPathTried asset.Path
+	lastImagePath asset.Path
 	img           *flat.Image
 }
 
@@ -54,7 +42,7 @@ func imageEd(context *editor.TypeEditContext, value reflect.Value) error {
 	// If we need to store temp info while editing, use GetContext
 	c, firstTime := editor.GetContext[imageEdContext](context, value)
 	if firstTime {
-		c.lastPathTried = image.Path
+		c.lastImagePath = image.Path
 		c.img = image
 	}
 
@@ -65,8 +53,8 @@ func imageEd(context *editor.TypeEditContext, value reflect.Value) error {
 		context.Edit(a)
 	}
 
-	if image.Path != c.lastPathTried {
-		c.lastPathTried = image.Path
+	if image.Path != c.lastImagePath {
+		c.lastImagePath = image.Path
 		img := flat.Image{Path: image.Path}
 		img.PostLoad()
 		if img.GetImage() != nil {

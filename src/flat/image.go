@@ -79,8 +79,8 @@ func (c *ImageComponent) BeginPlay() {
 
 func (c *ImageComponent) Draw(screen *ebiten.Image) {
 	op := c.op
-
 	ApplyComponentTransforms(c, &op.GeoM)
+
 	if c.Image != nil && c.Image.GetImage() != nil {
 		screen.DrawImage(c.Image.GetImage(), &op)
 	}
@@ -100,5 +100,12 @@ func ApplyComponentTransforms(tr Transformer, geom *ebiten.GeoM) {
 		if owningTransformer, ok := comp.Owner().(Transformer); ok {
 			ApplyComponentTransforms(owningTransformer, geom)
 		}
+	}
+}
+
+func WalkUpComponentOwners(start Component, callback func(comp Component)) {
+	for start != nil {
+		callback(start)
+		start = start.Owner()
 	}
 }

@@ -92,7 +92,7 @@ func componentTree(actor flat.Actor, actorEd *actorEdContext, context *editor.Ty
 			}
 		})
 		copyTree(actorEd.handler.actor, actorEd.componentTreeRoot)
-
+		context.SetChanged()
 	}
 	if actorEd.addDialog.Draw() {
 		desc := actorEd.addDialog.assetToCreate
@@ -101,6 +101,7 @@ func componentTree(actor flat.Actor, actorEd *actorEdContext, context *editor.Ty
 			actor.SetComponents(append(actor.GetComponents(), comp.(flat.Component)))
 			actorEd.componentTreeRoot = buildComponentTree(actor)
 			actorEd.valueToEdit = reflect.ValueOf(comp.(flat.Component)).Elem()
+			context.SetChanged()
 		}
 	}
 	edgui.DrawTree(actorEd.componentTreeRoot, &actorEd.handler)

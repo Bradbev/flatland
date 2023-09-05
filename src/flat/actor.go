@@ -1,6 +1,8 @@
 package flat
 
 import (
+	"reflect"
+
 	"github.com/hajimehoshi/ebiten/v2"
 )
 
@@ -128,4 +130,16 @@ func walkComponents(target, parent Component, callback func(target, parent Compo
 	for _, child := range target.GetComponents() {
 		walkComponents(child, target, callback)
 	}
+}
+
+func FindComponents[T Component](parent Component) []T {
+	result := []T{}
+	var zeroT T
+	typ := reflect.TypeOf(zeroT)
+	WalkComponents(parent, func(target, _ Component) {
+		if reflect.TypeOf(target) == typ {
+			result = append(result, target.(T))
+		}
+	})
+	return result
 }

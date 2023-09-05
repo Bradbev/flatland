@@ -33,8 +33,11 @@ type Ship struct {
 }
 
 func (s *Ship) BeginPlay() {
+	s.Transform.Location = vector3.Vector3{}
 	s.ActorBase.BeginPlay(s)
 	s.velocity = vector3.Vector3{}
+
+	//texts := flat.FindComponents[flat.Text](s)
 }
 
 func (s *Ship) Update() {
@@ -68,7 +71,7 @@ func (s *Ship) handleInput() {
 			s.velocity = *s.velocity.MulScalar(clamped / mag)
 		}
 	}
-	if isDown(ebiten.KeySpace) {
+	if isDown(ebiten.KeySpace) && ActiveWorld != nil {
 		if time.Since(s.lastFireTime) < time.Duration(float64(time.Second)*s.BulletType.FireDelay) {
 			return
 		}

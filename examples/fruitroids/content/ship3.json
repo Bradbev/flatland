@@ -37,10 +37,38 @@
             },
             "Radius": 32
           }
+        },
+        {
+          "Type": "github.com/bradbev/flatland/src/flat.Text",
+          "Parent": "",
+          "Inner": {
+            "Color": {
+              "A": 255,
+              "B": 255,
+              "G": 255,
+              "R": 255
+            },
+            "ComponentBase": {
+              "Transform": {
+                "Location": {
+                  "X": -10,
+                  "Y": 50
+                },
+                "ScaleX": 1,
+                "ScaleY": 1
+              }
+            },
+            "Font": {
+              "Type": "github.com/bradbev/flatland/src/flat.Font",
+              "Path": "defaultFont.json"
+            },
+            "Name": "Test",
+            "TextTemplate": "Player"
+          }
         }
       ],
       "Transform": {
-        "Rotation": 193.5,
+        "Rotation": 342,
         "ScaleX": 0.5,
         "ScaleY": 0.5
       }

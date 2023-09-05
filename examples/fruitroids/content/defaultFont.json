@@ -1,0 +1,13 @@
+{
+  "Type": "github.com/bradbev/flatland/src/flat.Font",
+  "Parent": "",
+  "Inner": {
+    "Name": "Default",
+    "Options": {
+      "DPI": 72,
+      "Hinting": 2,
+      "Size": 24
+    },
+    "TtfFile": "raw/arcade.ttf"
+  }
+}

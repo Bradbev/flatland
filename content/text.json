@@ -1,0 +1,22 @@
+{
+  "Type": "github.com/bradbev/flatland/src/flat.Text",
+  "Parent": "",
+  "Inner": {
+    "ActorBase": {
+      "Transform": {
+        "ScaleX": 1,
+        "ScaleY": 1
+      }
+    },
+    "Color": {
+      "B": 245,
+      "G": 245,
+      "R": 245
+    },
+    "Font": {
+      "Type": "github.com/bradbev/flatland/src/flat.Font",
+      "Path": "font.json"
+    },
+    "TextTemplate": "Press Space To Begin"
+  }
+}

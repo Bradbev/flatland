@@ -3,7 +3,8 @@
   "Parent": "",
   "Inner": {
     "Slice": [
-      7
+      7,
+      6
     ]
   }
 }

@@ -1,0 +1,13 @@
+{
+  "Type": "github.com/bradbev/flatland/src/flat.Font",
+  "Parent": "",
+  "Inner": {
+    "Name": "ArcadeMono",
+    "Options": {
+      "DPI": 72,
+      "Hinting": 2,
+      "Size": 20
+    },
+    "TtfFile": "pressstart2p.ttf"
+  }
+}

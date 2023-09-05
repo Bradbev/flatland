@@ -1,2 +1,3 @@
 # Ignore any coverage files
 coverage.out
+.DS_Store

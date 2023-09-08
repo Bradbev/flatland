@@ -3,7 +3,38 @@
   "Parent": "",
   "Inner": {
     "ActorBase": {
+      "Components": [
+        {
+          "Type": "github.com/bradbev/flatland/src/flat.TextComponent",
+          "Parent": "",
+          "Inner": {
+            "Color": {
+              "B": 12,
+              "G": 12,
+              "R": 201
+            },
+            "ComponentBase": {
+              "Transform": {
+                "Location": {
+                  "X": -85
+                },
+                "ScaleX": 1,
+                "ScaleY": 1
+              }
+            },
+            "Font": {
+              "Type": "github.com/bradbev/flatland/src/flat.Font",
+              "Path": "font.json"
+            },
+            "TextTemplate": "TestText"
+          }
+        }
+      ],
       "Transform": {
+        "Location": {
+          "X": 115,
+          "Y": 139
+        },
         "ScaleX": 1,
         "ScaleY": 1
       }

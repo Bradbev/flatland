@@ -32,6 +32,7 @@ func (w *World) BeginPlay() {
 		if actor == nil {
 			continue
 		}
+		//w.AddToWorld(actor)
 		instance, _ := asset.NewInstance(actor)
 		w.AddToWorld(instance.(Actor))
 	}

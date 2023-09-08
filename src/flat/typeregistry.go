@@ -8,5 +8,5 @@ func RegisterAllFlatTypes() {
 	asset.RegisterAsset(ImageComponent{})
 	asset.RegisterAsset(Font{})
 	asset.RegisterAsset(ActorBase{})
-	asset.RegisterAsset(Text{})
+	asset.RegisterAsset(TextComponent{})
 }

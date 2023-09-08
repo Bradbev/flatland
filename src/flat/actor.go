@@ -33,6 +33,9 @@ type Drawable interface {
 	Draw(screen *ebiten.Image)
 }
 
+// TODO - Need some other lifecycle hooks.
+// - Editor Construction?
+// - EndPlay?
 type Playable interface {
 	BeginPlay()
 }

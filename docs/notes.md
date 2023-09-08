@@ -14,6 +14,7 @@ information hiding/abstraction against reflection?
 - some sort of global context for the "world", otherwise objects won't be able to interact with each other.
 
 # Next Goal
+- BUG: "Revert" in the asset editor doesn't reuse Components 
 - Fruitroids game flow - start screen, lives, score, restart
 - Custom world editor
 - Custom debugger for PIE play

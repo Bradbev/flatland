@@ -17,6 +17,7 @@ type assetEditWindow struct {
 }
 
 func newAssetEditWindow(path string, target asset.Asset, context *TypeEditContext) *assetEditWindow {
+	// TODO - this needs a different lifecycle hook
 	if playable, ok := target.(flat.Playable); ok {
 		playable.BeginPlay()
 	}

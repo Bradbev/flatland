@@ -1,0 +1,12 @@
+{
+  "Type": "github.com/bradbev/flatland/src/flat.World",
+  "Parent": "",
+  "Inner": {
+    "PersistentActors": [
+      {
+        "Type": "main.actorTest",
+        "Path": "actorTest.json"
+      }
+    ]
+  }
+}

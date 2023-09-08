@@ -1,5 +1,5 @@
 {
-  "Type": "github.com/bradbev/flatland/src/flat.Text",
+  "Type": "github.com/bradbev/flatland/src/flat.TextComponent",
   "Parent": "",
   "Inner": {
     "ActorBase": {

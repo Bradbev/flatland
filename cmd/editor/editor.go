@@ -47,17 +47,16 @@ func main() {
 	})
 
 	// load an asset to be edited by the test editor
-	/*
-		asset.Save("testedit.json", &defaultTestObject)
-		gg.ed.EditAsset("testedit.json")
+	//asset.Save("testedit.json", &defaultTestObject)
+	//gg.ed.EditAsset("testedit.json")
 
-			asset.Save("childedit.json", &defaultTestObjectChild)
-			asset.SetParent(&defaultTestObjectChild, &defaultTestObject)
-			gg.ed.EditAsset("childedit.json")
+	//asset.Save("childedit.json", &defaultTestObjectChild)
+	//asset.SetParent(&defaultTestObjectChild, &defaultTestObject)
+	//gg.ed.EditAsset("childedit.json")
 
-			gg.ed.EditAsset("actorTest.json")
-	*/
-	gg.ed.EditAsset("font.json")
+	//gg.ed.EditAsset("actorTest.json")
+	//gg.ed.EditAsset("font.json")
+	//gg.ed.EditAsset("world.json")
 
 	menu := edgui.Menu{
 		Name: "Custom Item",

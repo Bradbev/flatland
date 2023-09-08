@@ -20,6 +20,7 @@ func RegisterAllFlatEditors(ed *editor.ImguiEditor) {
 	ed.AddType(new(flat.Transform), transformEd)
 	ed.AddType(new(flat.Font), fontEd)
 	ed.AddType(new(color.RGBA), colorRGBAEd)
+	ed.AddType(new(flat.World), worldEd)
 
 	ed.RegisterEnum(map[any]string{
 		font.HintingNone:     "None",

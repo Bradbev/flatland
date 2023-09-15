@@ -493,33 +493,6 @@ type postLoadParent struct {
 	InlineSaved *postLoadChecker `flat:"inline"`
 }
 
-func TestInlineAssetSavingPostLoad(t *testing.T) {
-	rootFS := newWriteFS()
-	reset := func() {
-		asset.Reset()
-		asset.RegisterFileSystem(rootFS.fs, 0)
-		asset.RegisterWritableFileSystem(rootFS)
-		asset.RegisterAsset(postLoadParent{})
-		asset.RegisterAsset(postLoadChecker{})
-	}
-	reset()
-
-	postLoaded := &postLoadChecker{}
-	asset.Save("postloaded.json", postLoaded)
-
-	parent := &postLoadParent{InlineSaved: postLoaded}
-	asset.Save("parent.json", parent)
-
-	child := &postLoadParent{}
-	asset.SetParent(child, parent)
-
-	err := asset.Save("child.json", child)
-	assert.NoError(t, err)
-
-	reset()
-
-}
-
 type testFilter struct{}
 
 func (t *testFilter) IFaceFunc() {}
@@ -585,4 +558,51 @@ func TestAssetDescriptorTypeFiltering(t *testing.T) {
 
 	desc = asset.FilterAssetDescriptorsByType[any]()
 	assert.Equal(t, allDescriptors, desc, "Exact type of the object matches")
+}
+
+type newInstanceTest struct {
+	SavedValue    int
+	postloaded    bool
+	internalValue int
+}
+
+func (n *newInstanceTest) PostLoad() {
+	n.postloaded = true
+}
+
+func (n *newInstanceTest) DefaultInitialize() {
+	n.internalValue = 111
+}
+
+func TestAssetNewInstance(t *testing.T) {
+	rootFS := newWriteFS()
+	reset := func() {
+		asset.Reset()
+		asset.RegisterFileSystem(rootFS.fs, 0)
+		asset.RegisterWritableFileSystem(rootFS)
+		asset.RegisterAsset(newInstanceTest{})
+	}
+	reset()
+
+	desc := asset.FilterAssetDescriptorsByType[newInstanceTest]()
+	instA, err := desc[0].Create()
+	inst := instA.(*newInstanceTest)
+	assert.NoError(t, err)
+	assert.Equal(t, 111, inst.internalValue, "Default initialize must have been called")
+	assert.False(t, inst.postloaded, "Creating a new instance does not call PostLoad")
+	inst.SavedValue = 123
+	asset.Save("inst.json", inst)
+
+	reset()
+	instA, err = asset.Load("inst.json")
+	inst = instA.(*newInstanceTest)
+	assert.Equal(t, 111, inst.internalValue, "Default initialize must have been called")
+	assert.True(t, inst.postloaded, "PostLoad is called when Load is used")
+
+	newInst, err := asset.NewInstance(inst)
+	instB := newInst.(*newInstanceTest)
+	assert.Equal(t, 123, instB.SavedValue, "Exported values are copied")
+	assert.Equal(t, 111, instB.internalValue, "Default initialize must have been called")
+	assert.True(t, instB.postloaded, "PostLoad is called when Load is used")
+
 }

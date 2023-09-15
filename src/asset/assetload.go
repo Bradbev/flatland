@@ -5,8 +5,6 @@ import (
 	"encoding/json"
 	"fmt"
 	"reflect"
-
-	"github.com/jinzhu/copier"
 )
 
 func (a *assetManagerImpl) Load(assetPath Path) (Asset, error) {
@@ -14,15 +12,11 @@ func (a *assetManagerImpl) Load(assetPath Path) (Asset, error) {
 }
 
 func (a *assetManagerImpl) NewInstance(assetToInstance Asset) (Asset, error) {
-	if path, ok := a.AssetToLoadPath[assetToInstance]; ok {
-		return a.LoadWithOptions(path, LoadOptions{createInstance: true})
-	}
-	// THIS NEEDS TO BE A NEW OBJECT that is COPIED from toInstance
-	if path, ok := a.AssetToLoadPath[assetToInstance]; ok {
-		return a.LoadWithOptions(path, LoadOptions{createInstance: true})
-	}
 
-	return assetToInstance, fmt.Errorf("Unable to find path for asset %v", a)
+	if path, ok := a.AssetToLoadPath[assetToInstance]; ok {
+		return a.LoadWithOptions(path, LoadOptions{createInstance: true})
+	}
+	return nil, fmt.Errorf("Unable to find path for asset %v", a)
 }
 
 func (a *assetManagerImpl) LoadWithOptions(assetPath Path, options LoadOptions) (Asset, error) {
@@ -41,14 +35,14 @@ func (a *assetManagerImpl) LoadWithOptions(assetPath Path, options LoadOptions) 
 		return nil, err
 	}
 
-	// load the generic format and validate things
-	container := loadedAssetContainer{}
+	// load the on disk format and validate things
+	container := onDiskLoadFormat{}
 	err = json.Unmarshal(data, &container)
 	if err != nil {
 		return nil, err
 	}
 
-	loadedAsset, err := a.loadFromLoadedAssetContainer(&container, alreadyLoadedAsset)
+	loadedAsset, err := a.loadFromOnDiskLoadFormat(&container, alreadyLoadedAsset)
 	if err != nil {
 		return nil, err
 	}
@@ -61,11 +55,28 @@ func (a *assetManagerImpl) LoadWithOptions(assetPath Path, options LoadOptions) 
 	return loadedAsset, nil
 }
 
-func (a *assetManagerImpl) loadFromLoadedAssetContainer(container *loadedAssetContainer, alreadyLoadedAsset Asset) (Asset, error) {
+func (a *assetManagerImpl) loadFromOnDiskLoadFormat(container *onDiskLoadFormat, alreadyLoadedAsset Asset) (Asset, error) {
+	var commonFormat any
+	err := json.Unmarshal(container.Inner, &commonFormat)
+	if err != nil {
+		return nil, err
+	}
+	parentPath := container.Parent
+	if parentPath == "" {
+		parentPath = a.ChildToParent[alreadyLoadedAsset]
+	}
+	return a.loadFromCommonFormat(container.Type, parentPath, commonFormat, alreadyLoadedAsset)
+}
 
-	assetDescriptor, ok := assetManager.AssetDescriptors[container.Type]
+func (a *assetManagerImpl) loadFromCommonFormat(
+	assetType string,
+	parentPath Path,
+	commonFormat any,
+	alreadyLoadedAsset Asset) (Asset, error) {
+
+	assetDescriptor, ok := assetManager.AssetDescriptors[assetType]
 	if !ok {
-		return nil, fmt.Errorf("Unknown asset '%s' - is type registered?", container.Type)
+		return nil, fmt.Errorf("Unknown asset '%s' - is type registered?", assetType)
 	}
 
 	assetToLoadInto := alreadyLoadedAsset
@@ -79,35 +90,33 @@ func (a *assetManagerImpl) loadFromLoadedAssetContainer(container *loadedAssetCo
 
 	_, TType := ObjectTypeName(assetToLoadInto)
 	//println("TType ", TType)
-	if TType != container.Type {
-		return nil, fmt.Errorf("Load type mismatch.  Wanted %s, loaded %s", TType, container.Type)
+	if TType != assetType {
+		return nil, fmt.Errorf("Load type mismatch.  Wanted %s, loaded %s", TType, assetType)
 	}
 
 	{ // copy the parent into the child
-		parentPath := container.Parent
-		if parentPath == "" {
-			parentPath = a.ChildToParent[assetToLoadInto]
-		}
-		// load the parent (if it has one) and copy it into the child
+		// load the parent (if it has one) and copy into the child
 		if parentPath != "" {
 			parent, err := a.Load(parentPath)
 			if err != nil {
 				return nil, err
 			}
-			copier.CopyWithOption(assetToLoadInto, parent, copier.Option{DeepCopy: true})
+			// we don't want the common format for a pointer to the parent, but
+			// to the real struct
+			parentConcrete := reflect.ValueOf(parent).Elem().Interface()
+			parentInCommonFormat := a.toCommonFormat(parentConcrete)
+			a.loadFromCommonFormat(assetType, "", parentInCommonFormat, assetToLoadInto)
+			//a.unmarshalCommonFormat(parentInCommonFormat, assetToLoadInto)
+
+			//copier.CopyWithOption(assetToLoadInto, parent, copier.Option{DeepCopy: true})
 			a.ChildToParent[assetToLoadInto] = parentPath
 		}
 	}
 
-	var anyInner any
-	err := json.Unmarshal(container.Inner, &anyInner)
-	if err != nil {
-		return nil, err
-	}
-
-	// anyInner can be nil - it means the whole object is default/inherited
-	if anyInner != nil {
-		err = a.unmarshalFromAny(anyInner, assetToLoadInto)
+	var err error
+	// commonFormat can be nil - it means the whole object is default/inherited
+	if commonFormat != nil {
+		err = a.unmarshalCommonFormat(commonFormat, assetToLoadInto)
 		if err != nil {
 			return nil, err
 		}
@@ -120,8 +129,8 @@ func (a *assetManagerImpl) loadFromLoadedAssetContainer(container *loadedAssetCo
 	return assetToLoadInto, err
 }
 
-func (a *assetManagerImpl) unmarshalFromAny(data any, v any) error {
-	return a.unmarshalFromValues(reflect.ValueOf(data), reflect.ValueOf(v).Elem())
+func (a *assetManagerImpl) unmarshalCommonFormat(data any, v any) error {
+	return a.unmarshalCommonFormatFromValues(reflect.ValueOf(data), reflect.ValueOf(v).Elem())
 }
 
 func safeLen(value reflect.Value) int {
@@ -134,7 +143,10 @@ func safeLen(value reflect.Value) int {
 	return value.Len()
 }
 
-func (a *assetManagerImpl) unmarshalFromValues(source reflect.Value, dest reflect.Value) error {
+// unmarshalCommonFormatFromValues accepts a source Value in Common format and a concrete
+// Go type in dest.
+// Common Format erases some type information about structs, so dest is reflected to recover types.
+func (a *assetManagerImpl) unmarshalCommonFormatFromValues(source reflect.Value, dest reflect.Value) error {
 	//fmt.Printf("source:%#v \nsettable? %v \nkind %s\n", source, source.CanSet(), source.Kind())
 	//fmt.Printf("dest:%#v \nkind %s\n-----\n", dest, dest.Kind())
 	t := dest.Type()
@@ -168,9 +180,9 @@ func (a *assetManagerImpl) unmarshalFromValues(source reflect.Value, dest reflec
 
 		if _, ok := loadPathInfo["Type"]; ok {
 			d, _ := json.Marshal(source.Interface())
-			var container loadedAssetContainer
+			var container onDiskLoadFormat
 			json.Unmarshal(d, &container)
-			inlineAsset, err := a.loadFromLoadedAssetContainer(&container, nil)
+			inlineAsset, err := a.loadFromOnDiskLoadFormat(&container, nil)
 			if err != nil {
 				return fmt.Errorf("unable to load inline asset")
 			}
@@ -185,7 +197,8 @@ func (a *assetManagerImpl) unmarshalFromValues(source reflect.Value, dest reflec
 				continue
 			}
 			fieldToSet := dest.Field(i)
-			key := reflect.ValueOf(t.Field(i).Name)
+			name := t.Field(i).Name
+			key := reflect.ValueOf(name)
 			dataToRead := source.MapIndex(key)
 			//fmt.Printf("Key %v Data %v\n", key, dataToRead)
 
@@ -193,7 +206,7 @@ func (a *assetManagerImpl) unmarshalFromValues(source reflect.Value, dest reflec
 				//log.Printf("dataToRead for key (%s) is missing, skipping", key)
 				continue
 			}
-			a.unmarshalFromValues(dataToRead.Elem(), fieldToSet)
+			a.unmarshalCommonFormatFromValues(dataToRead.Elem(), fieldToSet)
 		}
 	case reflect.Slice:
 		l := safeLen(source)
@@ -215,7 +228,7 @@ func (a *assetManagerImpl) unmarshalFromValues(source reflect.Value, dest reflec
 				indexToSet := dest.Index(i)
 				dataToRead := source.Index(i)
 				//fmt.Printf("Array Data %v\n", dataToRead)
-				a.unmarshalFromValues(dataToRead.Elem(), indexToSet)
+				a.unmarshalCommonFormatFromValues(dataToRead.Elem(), indexToSet)
 			}
 		}
 	default:

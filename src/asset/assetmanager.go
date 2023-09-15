@@ -11,15 +11,15 @@ import (
 	"golang.org/x/exp/slices"
 )
 
-// loadedAssetContainer must be the same as savedAssetContainer, except for the type of Inner
-type loadedAssetContainer struct {
+// onDiskLoadFormat must be the same as onDiskSaveFormat, except for the type of Inner
+type onDiskLoadFormat struct {
 	Type   string
 	Parent Path
 	Inner  json.RawMessage
 }
 
-// savedAssetContainer must be the same as loadedAssetContainer, except for the type of Inner
-type savedAssetContainer struct {
+// onDiskSaveFormat must be the same as onDiskLoadFormat, except for the type of Inner
+type onDiskSaveFormat struct {
 	Type   string
 	Parent Path
 	Inner  interface{}
@@ -115,7 +115,7 @@ func (a *assetManagerImpl) FilterFilesByType(typ reflect.Type) ([]string, error)
 		if err != nil {
 			return err
 		}
-		container := loadedAssetContainer{}
+		container := onDiskLoadFormat{}
 		err = json.Unmarshal(data, &container)
 		if err != nil {
 			return nil

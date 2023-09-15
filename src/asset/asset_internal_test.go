@@ -42,8 +42,8 @@ func TestBuildJsonToSave(t *testing.T) {
 		AssetToLoadPath: map[Asset]Path{},
 	}
 	a.AssetToLoadPath[&leaf] = "fullPath.json"
-	m := a.buildJsonToSave(node)
-	diffsFromParent := findDiffsFromParentJson(nil, m)
+	m := a.toCommonFormat(node)
+	diffsFromParent := findDiffsFromParentCommonFormat(nil, m)
 
 	j, err := json.MarshalIndent(diffsFromParent, "", "")
 	assert.NoError(t, err)
@@ -120,7 +120,7 @@ func TestUnmashallFromAny(t *testing.T) {
 			}
 		}()
 
-		a.unmarshalFromAny(toUnmarshal, &node)
+		a.unmarshalCommonFormat(toUnmarshal, &node)
 
 	}()
 
@@ -157,9 +157,9 @@ type jsmap = map[string]any
 func TestFindDiffsFromParent(t *testing.T) {
 	assetman := &assetManagerImpl{}
 	fd := func(a, b any) any {
-		r := findDiffsFromParentJson(
-			assetman.buildJsonToSave(a),
-			assetman.buildJsonToSave(b))
+		r := findDiffsFromParentCommonFormat(
+			assetman.toCommonFormat(a),
+			assetman.toCommonFormat(b))
 		//jsp("Return::::::", r)
 		return r
 	}

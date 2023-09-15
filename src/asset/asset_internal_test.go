@@ -232,7 +232,7 @@ type TestTags struct {
 	A int `flat:"inline   ;  key:value   ;   desc:A long description ;  last:last value" other:"other value"`
 }
 
-func TestTagExtraction(t *testing.T) {
+func TestGetFlatTag(t *testing.T) {
 	sf, _ := reflect.TypeOf(TestTags{}).FieldByName("A")
 	table := []struct {
 		key           string

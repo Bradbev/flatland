@@ -56,7 +56,7 @@ func main() {
 
 	//gg.ed.EditAsset("actorTest.json")
 	//gg.ed.EditAsset("font.json")
-	//gg.ed.EditAsset("world.json")
+	gg.ed.EditAsset("world.json")
 
 	menu := edgui.Menu{
 		Name: "Custom Item",
@@ -110,18 +110,19 @@ const (
 // EditTest demonstrates all the ways that the editor can
 // edit types.
 type EditTest struct {
-	TestEnum    TestEnum
-	AssetType   asset.Asset // support setting Assets
-	Flt         float32
-	Slice       []int
-	Array       [3]float32
-	StringSlice []string
-	StructSlice []nestedIndirect
-	Flt64       float64
-	Bool        bool
-	String      string
-	Int         int
-	hidden      float32
+	TestEnum        TestEnum
+	AssetType       asset.Asset // support setting Assets
+	RestrictedTypes *EditTest
+	Flt             float32
+	Slice           []int
+	Array           [3]float32
+	StringSlice     []string
+	StructSlice     []nestedIndirect
+	Flt64           float64
+	Bool            bool
+	String          string
+	Int             int
+	hidden          float32
 
 	// Path is filtered using the tag "filter" to files containing the text "json"
 	Path asset.Path `flat:"desc:Path (json filter) ; filter:json" filter:"json"`
@@ -150,6 +151,7 @@ type G struct {
 	dscale         float64
 	w, h           int
 	showTestTree   bool
+	showTestList   bool
 
 	ed *editor.ImguiEditor
 }
@@ -157,6 +159,7 @@ type G struct {
 func (g *G) showTestControls() {
 	if imgui.Begin("Test Controls") {
 		imgui.Checkbox("ShowTestTree", &g.showTestTree)
+		imgui.Checkbox("ShowTestList", &g.showTestList)
 		imgui.Checkbox("ShowDemoWindow", &g.showDemoWindow)
 	}
 	imgui.End()
@@ -184,6 +187,10 @@ func (g *G) Update() error {
 
 		if g.showTestTree {
 			edtest.TreeTest()
+		}
+
+		if g.showTestList {
+			edtest.ListTest()
 		}
 	}
 	g.mgr.EndFrame()

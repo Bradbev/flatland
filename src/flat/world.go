@@ -9,7 +9,7 @@ import (
 type World struct {
 	updateables      []Updateable
 	drawables        []Drawable
-	PersistentActors []Actor
+	PersistentActors []Actor `flat:"inline"`
 }
 
 func NewWorld() *World {

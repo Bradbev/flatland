@@ -348,8 +348,6 @@ type interfaceEdContext struct {
 }
 
 func interfaceEd(context *TypeEditContext, value reflect.Value) error {
-	// onActivated can be replaced in the future with something that is
-	// much smarter about filtering the asset types
 	onActivated := func() []string {
 		items, _ := asset.FilterFilesByReflectType(value.Type())
 		return items

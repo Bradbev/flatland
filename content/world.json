@@ -5,7 +5,8 @@
     "PersistentActors": [
       {
         "Type": "main.actorTest",
-        "Path": "actorTest.json"
+        "Parent": "actorTest.json",
+        "Inner": null
       }
     ]
   }

@@ -199,8 +199,8 @@ func (a *assetManagerImpl) findDiffsFromParent(parent, child any) any {
 // is different from the Parent.  In the degenerate case, a copy of child will
 // be returned.
 func findDiffsFromParentJson(parent, child any) any {
-	//jsp("Parent ----", parent)
-	//jsp("Child ----", child)
+	jsp("Parent ----", parent)
+	jsp("Child ----", child)
 
 	childType := reflect.TypeOf(child)
 	parentValue := reflect.ValueOf(parent)
@@ -209,7 +209,7 @@ func findDiffsFromParentJson(parent, child any) any {
 		parentType := reflect.TypeOf(parent)
 		if parentType != childType {
 			// types differ, keep the child (unless it's the zero value)
-			if childValue.IsZero() {
+			if child == nil || childValue.IsZero() {
 				return nil
 			}
 			return child

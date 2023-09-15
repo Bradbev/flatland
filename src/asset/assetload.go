@@ -13,11 +13,16 @@ func (a *assetManagerImpl) Load(assetPath Path) (Asset, error) {
 	return a.LoadWithOptions(assetPath, LoadOptions{})
 }
 
-func (a *assetManagerImpl) NewInstance(toInstance Asset) (Asset, error) {
-	if path, ok := a.AssetToLoadPath[toInstance]; ok {
+func (a *assetManagerImpl) NewInstance(assetToInstance Asset) (Asset, error) {
+	if path, ok := a.AssetToLoadPath[assetToInstance]; ok {
 		return a.LoadWithOptions(path, LoadOptions{createInstance: true})
 	}
-	return nil, fmt.Errorf("Unable to find path for asset %v", a)
+	// THIS NEEDS TO BE A NEW OBJECT that is COPIED from toInstance
+	if path, ok := a.AssetToLoadPath[assetToInstance]; ok {
+		return a.LoadWithOptions(path, LoadOptions{createInstance: true})
+	}
+
+	return assetToInstance, fmt.Errorf("Unable to find path for asset %v", a)
 }
 
 func (a *assetManagerImpl) LoadWithOptions(assetPath Path, options LoadOptions) (Asset, error) {

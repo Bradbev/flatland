@@ -410,6 +410,7 @@ type inlineInnerSaveStruct struct {
 type inlineSaving struct {
 	WillNotSave         *inlineInnerSaveStruct
 	SaveInline          *inlineInnerSaveStruct `flat:"inline"`
+	SaveInlineNoChanges *inlineInnerSaveStruct `flat:"inline"`
 	SaveInterfaceInline any                    `flat:"inline"`
 }
 
@@ -435,6 +436,8 @@ func TestInlineAssetSaving(t *testing.T) {
 	}
 
 	asset.SetParent(toSave.SaveInline, parent)
+	toSave.SaveInlineNoChanges = parent
+	asset.SetParent(toSave.SaveInlineNoChanges, parent)
 
 	err := asset.Save("inlined.json", toSave)
 	assert.NoError(t, err)
@@ -445,6 +448,7 @@ func TestInlineAssetSaving(t *testing.T) {
 	assert.NoError(t, err)
 	expected := &inlineSaving{
 		SaveInline:          &inlineInnerSaveStruct{"InlineA", "ParentB"},
+		SaveInlineNoChanges: &inlineInnerSaveStruct{"ParentA", "ParentB"},
 		SaveInterfaceInline: &inlineInnerSaveStruct{"IfaceA", "IfaceB"},
 	}
 	assert.Equal(t, expected, loaded)
@@ -460,6 +464,11 @@ func TestInlineAssetSaving(t *testing.T) {
         "ItemA": "InlineA"
       }
     },
+    "SaveInlineNoChanges": {
+      "Type": "github.com/bradbev/flatland/src/asset_test.inlineInnerSaveStruct",
+      "Parent": "parent.json",
+      "Inner": null
+    },
     "SaveInterfaceInline": {
       "Type": "github.com/bradbev/flatland/src/asset_test.inlineInnerSaveStruct",
       "Parent": "",
@@ -472,6 +481,43 @@ func TestInlineAssetSaving(t *testing.T) {
 }`
 	data, err := fs.ReadFile(rootFS.fs, "inlined.json")
 	assert.Equal(t, exactFileContent, string(data), "The inlined field has a parent etc")
+}
+
+type postLoadChecker struct {
+	hasPostLoaded bool
+}
+
+func (p *postLoadChecker) PostLoad() { p.hasPostLoaded = true }
+
+type postLoadParent struct {
+	InlineSaved *postLoadChecker `flat:"inline"`
+}
+
+func TestInlineAssetSavingPostLoad(t *testing.T) {
+	rootFS := newWriteFS()
+	reset := func() {
+		asset.Reset()
+		asset.RegisterFileSystem(rootFS.fs, 0)
+		asset.RegisterWritableFileSystem(rootFS)
+		asset.RegisterAsset(postLoadParent{})
+		asset.RegisterAsset(postLoadChecker{})
+	}
+	reset()
+
+	postLoaded := &postLoadChecker{}
+	asset.Save("postloaded.json", postLoaded)
+
+	parent := &postLoadParent{InlineSaved: postLoaded}
+	asset.Save("parent.json", parent)
+
+	child := &postLoadParent{}
+	asset.SetParent(child, parent)
+
+	err := asset.Save("child.json", child)
+	assert.NoError(t, err)
+
+	reset()
+
 }
 
 type testFilter struct{}

@@ -218,7 +218,7 @@ func (a *assetManagerImpl) SetParent(child Asset, parent Asset) error {
 	if err != nil {
 		return err
 	}
-	// unmarshal the diffs into the child
+	// unmarshal the diffs into the child to restore the old child values
 	json.Unmarshal(b, child)
 
 	return err

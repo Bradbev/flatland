@@ -12,11 +12,18 @@ func (a *assetManagerImpl) Load(assetPath Path) (Asset, error) {
 }
 
 func (a *assetManagerImpl) NewInstance(assetToInstance Asset) (Asset, error) {
-
-	if path, ok := a.AssetToLoadPath[assetToInstance]; ok {
-		return a.LoadWithOptions(path, LoadOptions{createInstance: true})
+	descriptor := a.GetAssetDescriptor(assetToInstance)
+	if descriptor == nil {
+		return nil, fmt.Errorf("Unable to find descriptor for asset %v", assetToInstance)
 	}
-	return nil, fmt.Errorf("Unable to find path for asset %v", a)
+
+	concreteOrigin := reflect.ValueOf(assetToInstance).Elem().Interface()
+	commonFormat := a.toCommonFormat(concreteOrigin)
+	instance, err := a.loadFromCommonFormat(descriptor.FullName, "", commonFormat, nil)
+	if err != nil {
+		return nil, fmt.Errorf("Unable to create instance from %v", descriptor)
+	}
+	return instance, nil
 }
 
 func (a *assetManagerImpl) LoadWithOptions(assetPath Path, options LoadOptions) (Asset, error) {
@@ -106,9 +113,8 @@ func (a *assetManagerImpl) loadFromCommonFormat(
 			parentConcrete := reflect.ValueOf(parent).Elem().Interface()
 			parentInCommonFormat := a.toCommonFormat(parentConcrete)
 			a.loadFromCommonFormat(assetType, "", parentInCommonFormat, assetToLoadInto)
-			//a.unmarshalCommonFormat(parentInCommonFormat, assetToLoadInto)
 
-			//copier.CopyWithOption(assetToLoadInto, parent, copier.Option{DeepCopy: true})
+			// set the parent for this asset
 			a.ChildToParent[assetToLoadInto] = parentPath
 		}
 	}
@@ -162,33 +168,51 @@ func (a *assetManagerImpl) unmarshalCommonFormatFromValues(source reflect.Value,
 		if source.IsNil() {
 			return fmt.Errorf("attempt to load pointer, but is nil")
 		}
-		loadPathInfo, ok := source.Interface().(map[string]any)
-		if !ok {
-			return fmt.Errorf("unable to cast %v to map[string]any", source)
+
+		// this is a quirk - normal load would be returning a map[string]any because it's
+		// come via the json loader.  However if we got to the common format internally (toCommonFormat)
+		// then it'll be *mostly* common format, but the onDiskLoadFormat structs will still be native.
+		var diskLoadFormat onDiskLoadFormat
+		diskSaveFormat, isDiskFormat := source.Interface().(*onDiskSaveFormat)
+		if isDiskFormat {
+			b, _ := json.Marshal(diskSaveFormat)
+			json.Unmarshal(b, &diskLoadFormat)
 		}
 
-		if pathAny, ok := loadPathInfo["Path"]; ok {
-			// This is a saved reference to another asset
-			path := pathAny.(string)
-			asset, err := a.Load(Path(path))
-			if err != nil {
-				return fmt.Errorf("unable to load asset at path %s", path)
+		loadPathInfo, isLoadPath := source.Interface().(map[string]any)
+		if !isLoadPath && !isDiskFormat {
+			return fmt.Errorf("unable to cast %v to map[string]any, OR to onDiskLoadFormat", source)
+		}
+
+		if isLoadPath {
+			// Paths must load first
+			if pathAny, ok := loadPathInfo["Path"]; ok {
+				// This is a saved reference to another asset
+				path := pathAny.(string)
+				asset, err := a.Load(Path(path))
+				if err != nil {
+					return fmt.Errorf("unable to load asset at path %s", path)
+				}
+				dest.Set(reflect.ValueOf(asset))
+				return nil
 			}
-			dest.Set(reflect.ValueOf(asset))
-			return nil
+
+			if _, ok := loadPathInfo["Type"]; ok {
+				d, _ := json.Marshal(source.Interface())
+				json.Unmarshal(d, &diskLoadFormat)
+				isDiskFormat = true
+			}
 		}
 
-		if _, ok := loadPathInfo["Type"]; ok {
-			d, _ := json.Marshal(source.Interface())
-			var container onDiskLoadFormat
-			json.Unmarshal(d, &container)
-			inlineAsset, err := a.loadFromOnDiskLoadFormat(&container, nil)
+		if isDiskFormat {
+			inlineAsset, err := a.loadFromOnDiskLoadFormat(&diskLoadFormat, nil)
 			if err != nil {
 				return fmt.Errorf("unable to load inline asset")
 			}
 			dest.Set(reflect.ValueOf(inlineAsset))
 			return nil
 		}
+
 		panic("Should not get here")
 
 	case reflect.Struct:
@@ -200,7 +224,6 @@ func (a *assetManagerImpl) unmarshalCommonFormatFromValues(source reflect.Value,
 			name := t.Field(i).Name
 			key := reflect.ValueOf(name)
 			dataToRead := source.MapIndex(key)
-			//fmt.Printf("Key %v Data %v\n", key, dataToRead)
 
 			if dataToRead.Kind() == reflect.Invalid {
 				//log.Printf("dataToRead for key (%s) is missing, skipping", key)

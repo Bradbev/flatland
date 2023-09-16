@@ -1,7 +1,6 @@
 package flat
 
 import (
-	"github.com/bradbev/flatland/src/asset"
 	"github.com/hajimehoshi/ebiten/v2"
 	"golang.org/x/exp/slices"
 )
@@ -32,9 +31,9 @@ func (w *World) BeginPlay() {
 		if actor == nil {
 			continue
 		}
-		//w.AddToWorld(actor)
-		instance, _ := asset.NewInstance(actor)
-		w.AddToWorld(instance.(Actor))
+		w.AddToWorld(actor)
+		//instance, _ := asset.NewInstance(actor)
+		//w.AddToWorld(instance.(Actor))
 	}
 }
 

@@ -190,6 +190,11 @@ func (a *assetManagerImpl) RegisterAssetFactory(zeroAsset any, factoryFunction F
 	})
 }
 
+func (a *assetManagerImpl) GetAssetDescriptor(target Asset) *AssetDescriptor {
+	_, typeName := ObjectTypeName(target)
+	return a.AssetDescriptors[typeName]
+}
+
 // SetParent is used to set the parent of an Asset and also update
 // the child with new parent defaults.
 func (a *assetManagerImpl) SetParent(child Asset, parent Asset) error {

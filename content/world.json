@@ -6,7 +6,122 @@
       {
         "Type": "main.actorTest",
         "Parent": "actorTest.json",
-        "Inner": null
+        "Inner": {
+          "ActorBase": {
+            "Components": [
+              {
+                "Type": "github.com/bradbev/flatland/src/flat.TextComponent",
+                "Parent": "",
+                "Inner": {
+                  "Color": {
+                    "B": 5,
+                    "G": 208,
+                    "R": 59
+                  },
+                  "ComponentBase": {
+                    "Transform": {
+                      "Location": {
+                        "X": -41
+                      },
+                      "ScaleX": 1,
+                      "ScaleY": 1
+                    }
+                  },
+                  "Font": {
+                    "Type": "github.com/bradbev/flatland/src/flat.Font",
+                    "Path": "font.json"
+                  },
+                  "TextTemplate": "Text"
+                }
+              }
+            ],
+            "Transform": {
+              "Location": {
+                "Y": 147
+              }
+            }
+          }
+        }
+      },
+      {
+        "Type": "main.actorTest",
+        "Parent": "actorTest.json",
+        "Inner": {
+          "ActorBase": {
+            "Components": [
+              {
+                "Type": "github.com/bradbev/flatland/src/flat.TextComponent",
+                "Parent": "",
+                "Inner": {
+                  "Color": {
+                    "B": 12,
+                    "G": 12,
+                    "R": 201
+                  },
+                  "ComponentBase": {
+                    "Transform": {
+                      "Location": {
+                        "X": -85
+                      },
+                      "ScaleX": 1,
+                      "ScaleY": 1
+                    }
+                  },
+                  "Font": {
+                    "Type": "github.com/bradbev/flatland/src/flat.Font",
+                    "Path": "font.json"
+                  },
+                  "TextTemplate": "TestText"
+                }
+              }
+            ],
+            "Transform": {
+              "Location": {
+                "Y": 234
+              }
+            }
+          }
+        }
+      },
+      {
+        "Type": "main.actorTest",
+        "Parent": "actorTest.json",
+        "Inner": {
+          "ActorBase": {
+            "Components": [
+              {
+                "Type": "github.com/bradbev/flatland/src/flat.TextComponent",
+                "Parent": "",
+                "Inner": {
+                  "Color": {
+                    "B": 12,
+                    "G": 12,
+                    "R": 201
+                  },
+                  "ComponentBase": {
+                    "Transform": {
+                      "Location": {
+                        "X": -85
+                      },
+                      "ScaleX": 1,
+                      "ScaleY": 1
+                    }
+                  },
+                  "Font": {
+                    "Type": "github.com/bradbev/flatland/src/flat.Font",
+                    "Path": "font.json"
+                  },
+                  "TextTemplate": "Test3"
+                }
+              }
+            ],
+            "Transform": {
+              "Location": {
+                "X": 277
+              }
+            }
+          }
+        }
       }
     ]
   }

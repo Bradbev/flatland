@@ -17,12 +17,13 @@ type TextComponent struct {
 	TextTemplate          string
 	IgnoreParentRotations bool
 
-	tmpl     *template.Template
-	lastEval strings.Builder
-	op       ebiten.DrawImageOptions
+	lastTextTemplate string
+	tmpl             *template.Template
+	lastEval         strings.Builder
+	op               ebiten.DrawImageOptions
 }
 
-func (t *TextComponent) PostLoad() {
+func (t *TextComponent) updateCachedValues() {
 	tmpl, err := template.New(t.Name).Parse(t.TextTemplate)
 	Check(err)
 	t.lastEval.Reset()
@@ -40,6 +41,9 @@ func (t *TextComponent) FillTemplate(data any) {
 func (t *TextComponent) Draw(screen *ebiten.Image) {
 	if t.Font == nil {
 		return
+	}
+	if t.lastTextTemplate != t.TextTemplate {
+		t.updateCachedValues()
 	}
 
 	t.op.GeoM = ebiten.GeoM{}

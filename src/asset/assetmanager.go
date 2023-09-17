@@ -7,7 +7,6 @@ import (
 	"reflect"
 	"strings"
 
-	"github.com/jinzhu/copier"
 	"golang.org/x/exp/slices"
 )
 
@@ -203,28 +202,33 @@ func (a *assetManagerImpl) SetParent(child Asset, parent Asset) error {
 		return fmt.Errorf("parent is not a loaded asset %v", parent)
 	}
 	// To set a new parent we need to find the diffs between the old parent and the child
-	var oldParent any
-	if oldParentPath, ok := a.ChildToParent[child]; ok {
-		var err error
-		oldParent, err = a.Load(oldParentPath)
-		if err != nil {
-			return err
+	/*
+		var oldParent any
+		if oldParentPath, ok := a.ChildToParent[child]; ok {
+			var err error
+			oldParent, err = a.Load(oldParentPath)
+			if err != nil {
+				return err
+			}
 		}
-	}
+	*/
 
 	a.ChildToParent[child] = parentPath
 
-	// find diffs between the old parent and the child
-	diffs := a.findDiffsFromParent(oldParent, child)
+	// TODO - fix this properly
+	/*
+		// find diffs between the old parent and the child
+		diffs := a.findDiffsFromParent(oldParent, child)
 
-	// copy the new parent values into the child
-	copier.CopyWithOption(child, parent, copier.Option{DeepCopy: true})
-	b, err := json.Marshal(diffs)
-	if err != nil {
-		return err
-	}
-	// unmarshal the diffs into the child to restore the old child values
-	json.Unmarshal(b, child)
+		// copy the new parent values into the child
+		copier.CopyWithOption(child, parent, copier.Option{DeepCopy: true})
+		b, err := json.Marshal(diffs)
+		if err != nil {
+			return err
+		}
+		// unmarshal the diffs into the child to restore the old child values
+		json.Unmarshal(b, child)
+	*/
 
-	return err
+	return nil
 }

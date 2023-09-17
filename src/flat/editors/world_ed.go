@@ -25,7 +25,7 @@ func worldEd(context *editor.TypeEditContext, value reflect.Value) error {
 		c.buildWorldTree()
 		c.addDialog = &addDialog{Title: "Add Actor##uniqueID"}
 		c.addDialog.Context = c
-		world.BeginPlay()
+		//		world.BeginPlay()
 	}
 	flags := imgui.TableFlagsSizingStretchSame |
 		imgui.TableFlagsResizable |
@@ -37,25 +37,27 @@ func worldEd(context *editor.TypeEditContext, value reflect.Value) error {
 
 		imgui.TableNextRow()
 		imgui.TableSetColumnIndex(0)
-		c.renderOutliner(world, context, value)
+		c.renderOutliner(context, value)
 
 		imgui.TableSetColumnIndex(1)
-		c.renderWorld(world, context, value)
+		c.renderWorld(context, value)
 	}
 
 	return nil
 }
 
 type worldEdContext struct {
-	world     *flat.World
-	root      *worldTreeNode
-	addDialog *addDialog
+	world       *flat.World
+	root        *worldTreeNode
+	addDialog   *addDialog
+	valueToEdit reflect.Value
+	actorToEdit flat.Actor
 }
 
-func (w *worldEdContext) renderWorld(world *flat.World, context *editor.TypeEditContext, value reflect.Value) {
+func (w *worldEdContext) renderWorld(context *editor.TypeEditContext, value reflect.Value) {
 	width := imgui.ColumnWidth()
 	id, img := context.Ed.GetImguiTexture(value, width, width)
-	img.Fill(color.RGBA{0x70, 0x70, 0x70, 0xFF})
+	img.Fill(color.Black)
 	w.world.Draw(img)
 	for i, a := range w.world.PersistentActors {
 		if a == nil {
@@ -70,36 +72,67 @@ func (w *worldEdContext) renderWorld(world *flat.World, context *editor.TypeEdit
 	imgui.Image(id, imgui.Vec2{X: f32(width), Y: f32(width)})
 }
 
-func (w *worldEdContext) renderOutliner(world *flat.World, context *editor.TypeEditContext, value reflect.Value) {
+type worldTreeHandler struct {
+	context *worldEdContext
+}
+
+func (wt *worldTreeHandler) Clicked(node edgui.TreeNode) {
+	toEdit := node.(*worldTreeNode).actor
+	wt.context.actorToEdit = toEdit
+	wt.context.valueToEdit = reflect.ValueOf(toEdit).Elem()
+}
+
+func (w *worldEdContext) renderOutliner(context *editor.TypeEditContext, value reflect.Value) {
 	imgui.Text("Outliner")
 	if imgui.Button("Add") {
 		w.addDialog.Open()
 	}
 	if w.addDialog.Draw() {
+		w.buildWorldTree()
 		context.SetChanged()
 	}
 
-	edgui.DrawTree(w.root, nil)
+	edgui.DrawTree(w.root, &worldTreeHandler{
+		context: w,
+	})
 
 	imgui.Separator()
-	editor.StructEd(context, value)
+	if w.valueToEdit.IsValid() {
+		w.actorInlineEd(context, w.valueToEdit)
+	}
+}
+
+func (w *worldEdContext) actorInlineEd(context *editor.TypeEditContext, value reflect.Value) {
+	editor.StructEd(context, w.valueToEdit)
+	imgui.Separator()
+	for _, c := range w.actorToEdit.GetComponents() {
+		if c == nil {
+			continue
+		}
+		editor.StructEd(context, reflect.ValueOf(c).Elem())
+		imgui.Separator()
+	}
 }
 
 func (w *worldEdContext) buildWorldTree() {
 	w.root = &worldTreeNode{
 		name: "Root",
 	}
-	for _, c := range w.world.PersistentActors {
-		name, _ := asset.ObjectTypeName(c)
-		w.root.children = append(w.root.children, &worldTreeNode{name: name})
+	for _, actor := range w.world.PersistentActors {
+		name, _ := asset.ObjectTypeName(actor)
+		w.root.children = append(w.root.children,
+			&worldTreeNode{
+				name:  name,
+				actor: actor,
+			})
 	}
-
 }
 
 type worldTreeNode struct {
 	name     string
 	children []edgui.TreeNode
 	selected bool
+	actor    flat.Actor
 }
 
 var _ edgui.TreeNode = (*worldTreeNode)(nil)
@@ -138,15 +171,11 @@ func (a *addDialog) DoubleClicked(node edgui.ListNode, index int) {
 }
 
 type addAssetItem struct {
-	descriptor *asset.AssetDescriptor
-	assetPath  string
-	selected   bool
+	assetPath string
+	selected  bool
 }
 
 func (a *addAssetItem) Name() string {
-	if a.descriptor != nil {
-		return a.descriptor.Name
-	}
 	return a.assetPath
 }
 
@@ -159,11 +188,6 @@ func (a *addDialog) Open() {
 	imgui.OpenPopup(a.Title)
 
 	var items []*addAssetItem
-	for _, desc := range asset.GetAssetDescriptors() {
-		items = append(items, &addAssetItem{
-			descriptor: desc,
-		})
-	}
 	paths, _ := asset.FilterFilesByReflectType(reflect.TypeOf(new(flat.Actor)))
 	for _, p := range paths {
 		items = append(items, &addAssetItem{
@@ -183,18 +207,14 @@ func (a *addDialog) Draw() bool {
 		edgui.WithDisabled(a.selectedItem == nil, func() {
 			if imgui.Button("Add") {
 				var actorToAdd flat.Actor
-				if a.selectedItem.descriptor == nil {
-					parent, err := asset.Load(asset.Path(a.selectedItem.assetPath))
-					flat.Check(err)
-					instance, err := asset.NewInstance(parent)
-					flat.Check(err)
-					asset.SetParent(instance, parent)
-					actorToAdd = instance.(flat.Actor)
-				} else {
-					instance, err := a.selectedItem.descriptor.Create()
-					flat.Check(err)
-					actorToAdd = instance.(flat.Actor)
-				}
+				// an existing actor was selected.  Load it and set it as the parent
+				parent, err := asset.Load(asset.Path(a.selectedItem.assetPath))
+				flat.Check(err)
+				instance, err := asset.NewInstance(parent)
+				flat.Check(err)
+				asset.SetParent(instance, parent)
+				actorToAdd = instance.(flat.Actor)
+
 				world := a.Context.world
 				world.AddToWorld(actorToAdd)
 				world.PersistentActors = append(world.PersistentActors, actorToAdd)

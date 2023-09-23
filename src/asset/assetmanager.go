@@ -237,6 +237,27 @@ const (
 	OverrideDisable
 )
 
+func SetChildOverrideForField(child Asset, pathToField string, enable OverrideEnableType) error {
+	return assetManager.SetChildOverrideForField(child, pathToField, enable)
+}
+
 func (a *assetManagerImpl) SetChildOverrideForField(child Asset, pathToField string, enable OverrideEnableType) error {
+	overrides := a.ChildAssetOverrides[child]
+	if enable == OverrideEnable {
+		if overrides == nil {
+			overrides = newChildOverrides()
+			a.ChildAssetOverrides[child] = overrides
+		}
+		overrides.AddPath(pathToField)
+	}
+	if enable == OverrideDisable && overrides != nil {
+		overrides.RemovePath(pathToField)
+		if overrides.Empty() {
+			delete(a.ChildAssetOverrides, child)
+		}
+		if parentPath, ok := a.ChildToParent[child]; ok {
+			a.refreshParentValuesForChild(child, parentPath)
+		}
+	}
 	return nil
 }

@@ -361,11 +361,24 @@ func TestParentLoadingSavingSetting(t *testing.T) {
 		parent.StrA = "ChangedParent"
 		Save("parent.json", parent)
 
-		// WORKMARK - reloading child assets needs to work
-		// Overrides need to be respected when loading
 		expected.StrA = "ChangedParent"
 		assert.Equal(t, expected, child.Children[0])
 
-	}
+		// change the child & resave the parent - child should change
+		child.Children[0].StrA = "Will be overridden on parent save"
+		Save("parent.json", parent)
+		assert.Equal(t, expected, child.Children[0], "The child value will be back to he parent")
 
+		// change child, mark it changed, save parent
+		child.Children[0].StrA = "Child Has Changed"
+		SetChildOverrideForField(child.Children[0], "StrA", OverrideEnable)
+		expected.StrA = child.Children[0].StrA
+		Save("parent.json", parent)
+		assert.Equal(t, expected, child.Children[0], "The child value will now save")
+
+		// revert the change, restore the child
+		SetChildOverrideForField(child.Children[0], "StrA", OverrideDisable)
+		expected.StrA = "ChangedParent"
+		assert.Equal(t, expected, child.Children[0], "The child value is back to the parent")
+	}
 }

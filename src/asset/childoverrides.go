@@ -24,7 +24,15 @@ func (c *childOverrides) BuildFromCommonFormat(commonFormat any) {
 	c.buildFromCommonFormat(commonFormat, []string{})
 }
 
-func (c *childOverrides) addPath(path string) {
+func (c *childOverrides) RemovePath(path string) {
+	delete(c.overrides, path)
+}
+
+func (c *childOverrides) Empty() bool {
+	return len(c.overrides) == 0
+}
+
+func (c *childOverrides) AddPath(path string) {
 	c.overrides[path] = struct{}{}
 }
 
@@ -41,7 +49,7 @@ func (c *childOverrides) buildFromCommonFormat(commonFormat any, nameStack []str
 		if v.Elem().Kind() == reflect.Map {
 			c.buildFromCommonFormat(v.Elem().Interface(), append(nameStack, k.String()))
 		} else {
-			c.addPath(strings.Join(append(nameStack, k.String()), "."))
+			c.AddPath(strings.Join(append(nameStack, k.String()), "."))
 		}
 	}
 }

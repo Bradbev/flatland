@@ -141,9 +141,8 @@ func (a *assetManagerImpl) loadFromCommonFormat(
 }
 
 func (a *assetManagerImpl) unmarshalCommonFormat(data any, v any) error {
-	overrides := a.ChildAssetOverrides[v.(Asset)]
 	context := &commonFormatContext{}
-	return a.unmarshalCommonFormatFromValues(reflect.ValueOf(data), reflect.ValueOf(v).Elem(), overrides, context)
+	return a.unmarshalCommonFormatFromValues(reflect.ValueOf(data), reflect.ValueOf(v).Elem(), context)
 }
 
 func safeLen(value reflect.Value) int {
@@ -162,10 +161,9 @@ func safeLen(value reflect.Value) int {
 func (a *assetManagerImpl) unmarshalCommonFormatFromValues(
 	source reflect.Value,
 	dest reflect.Value,
-	overrides *childOverrides,
 	context *commonFormatContext) error {
-	fmt.Printf("source:%#v \nkind %s\n", source, source.Kind())
-	fmt.Printf("dest:%#v \nkind %s\n-----\n", dest, dest.Kind())
+	//fmt.Printf("source:%#v \nkind %s\n", source, source.Kind())
+	//fmt.Printf("dest:%#v \nkind %s\n-----\n", dest, dest.Kind())
 	t := dest.Type()
 	switch dest.Kind() {
 	case reflect.Interface:
@@ -253,7 +251,7 @@ func (a *assetManagerImpl) unmarshalCommonFormatFromValues(
 					//log.Printf("dataToRead for key (%s) is missing, skipping", key)
 					return
 				}
-				a.unmarshalCommonFormatFromValues(dataToRead.Elem(), fieldToSet, overrides, context)
+				a.unmarshalCommonFormatFromValues(dataToRead.Elem(), fieldToSet, context)
 			}(t.Field(i))
 		}
 	case reflect.Slice:
@@ -276,7 +274,7 @@ func (a *assetManagerImpl) unmarshalCommonFormatFromValues(
 				indexToSet := dest.Index(i)
 				dataToRead := source.Index(i)
 				//fmt.Printf("Array Data %v\n", dataToRead)
-				a.unmarshalCommonFormatFromValues(dataToRead.Elem(), indexToSet, overrides, context)
+				a.unmarshalCommonFormatFromValues(dataToRead.Elem(), indexToSet, context)
 			}
 		}
 	default:

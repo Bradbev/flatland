@@ -81,12 +81,16 @@ func (a *assetManagerImpl) toDiskFormat(toSave Asset) (*onDiskSaveFormat, error)
 func (a *assetManagerImpl) reloadChildAssets(path Path, parent Asset) {
 	for childAsset, parentPath := range a.ChildToParent {
 		if path == parentPath {
-			overrides := a.ChildAssetOverrides[childAsset]
-			child := a.toCommonFormatInternal(childAsset, &commonFormatContext{overrides: overrides})
-			desc := a.GetAssetDescriptor(childAsset)
-			a.loadFromCommonFormat(desc.FullName, path, child, childAsset)
+			a.refreshParentValuesForChild(childAsset, parentPath)
 		}
 	}
+}
+
+func (a *assetManagerImpl) refreshParentValuesForChild(childAsset Asset, parentPath Path) {
+	overrides := a.ChildAssetOverrides[childAsset]
+	child := a.toCommonFormatInternal(childAsset, &commonFormatContext{overrides: overrides})
+	desc := a.GetAssetDescriptor(childAsset)
+	a.loadFromCommonFormat(desc.FullName, parentPath, child, childAsset)
 }
 
 type assetLoadPath struct {

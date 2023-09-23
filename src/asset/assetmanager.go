@@ -40,6 +40,13 @@ type assetManagerImpl struct {
 
 	// ChildToParent maps a child asset to its parent
 	ChildToParent map[Asset]Path
+
+	EditorMode bool
+
+	// ChildAssetOverrides stores metadata about a child asset and
+	// the feilds that it overrides.  If an asset is not a child
+	// it will not be in this map.
+	ChildAssetOverrides map[Asset]*childOverrides
 }
 
 type fsWrapper struct {
@@ -51,11 +58,12 @@ var assetManager = newAssetManagerImpl()
 
 func newAssetManagerImpl() *assetManagerImpl {
 	return &assetManagerImpl{
-		FileSystems:      []*fsWrapper{},
-		AssetDescriptors: map[string]*AssetDescriptor{},
-		AssetToLoadPath:  map[Asset]Path{},
-		LoadPathToAsset:  map[Path]Asset{},
-		ChildToParent:    map[Asset]Path{},
+		FileSystems:         []*fsWrapper{},
+		AssetDescriptors:    map[string]*AssetDescriptor{},
+		AssetToLoadPath:     map[Asset]Path{},
+		LoadPathToAsset:     map[Path]Asset{},
+		ChildToParent:       map[Asset]Path{},
+		ChildAssetOverrides: map[Asset]*childOverrides{},
 	}
 }
 
@@ -194,41 +202,41 @@ func (a *assetManagerImpl) GetAssetDescriptor(target Asset) *AssetDescriptor {
 	return a.AssetDescriptors[typeName]
 }
 
-// SetParent is used to set the parent of an Asset and also update
-// the child with new parent defaults.
+// SetParent is used to set the parent of an Asset.
+// When an Asset is reparented, all values that are not overridden by the child
+// are copied in from the parent.  If there is no previous parent then the parent
+// and the child are diffed and in places where they differ the child will override
+// the parent.
 func (a *assetManagerImpl) SetParent(child Asset, parent Asset) error {
+	if !a.EditorMode {
+		panic("Must be in editor mode to call SetParent")
+	}
 	parentPath, ok := a.AssetToLoadPath[parent]
 	if !ok {
 		return fmt.Errorf("parent is not a loaded asset %v", parent)
 	}
-	// To set a new parent we need to find the diffs between the old parent and the child
-	/*
-		var oldParent any
-		if oldParentPath, ok := a.ChildToParent[child]; ok {
-			var err error
-			oldParent, err = a.Load(oldParentPath)
-			if err != nil {
-				return err
-			}
+
+	// no parent case
+	if _, hasParent := a.ChildToParent[child]; !hasParent {
+		diffs := a.findDiffsFromParent(parent, child)
+		if diffs != nil {
+			overrides := newChildOverrides()
+			overrides.BuildFromCommonFormat(diffs)
+			a.ChildAssetOverrides[child] = overrides
 		}
-	*/
+	}
 
 	a.ChildToParent[child] = parentPath
+	return nil
+}
 
-	// TODO - fix this properly
-	/*
-		// find diffs between the old parent and the child
-		diffs := a.findDiffsFromParent(oldParent, child)
+type OverrideEnableType uint8
 
-		// copy the new parent values into the child
-		copier.CopyWithOption(child, parent, copier.Option{DeepCopy: true})
-		b, err := json.Marshal(diffs)
-		if err != nil {
-			return err
-		}
-		// unmarshal the diffs into the child to restore the old child values
-		json.Unmarshal(b, child)
-	*/
+const (
+	OverrideEnable OverrideEnableType = iota
+	OverrideDisable
+)
 
+func (a *assetManagerImpl) SetChildOverrideForField(child Asset, pathToField string, enable OverrideEnableType) error {
 	return nil
 }

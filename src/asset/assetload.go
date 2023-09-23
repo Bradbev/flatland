@@ -101,22 +101,27 @@ func (a *assetManagerImpl) loadFromCommonFormat(
 		return nil, fmt.Errorf("Load type mismatch.  Wanted %s, loaded %s", TType, assetType)
 	}
 
-	{ // copy the parent into the child
-		// load the parent (if it has one) and copy into the child
-		if parentPath != "" {
-			parent, err := a.Load(parentPath)
-			if err != nil {
-				return nil, err
-			}
-			// we don't want the common format for a pointer to the parent, but
-			// to the real struct
-			parentConcrete := reflect.ValueOf(parent).Elem().Interface()
-			parentInCommonFormat := a.toCommonFormat(parentConcrete)
-			a.loadFromCommonFormat(assetType, "", parentInCommonFormat, assetToLoadInto)
-
-			// set the parent for this asset
-			a.ChildToParent[assetToLoadInto] = parentPath
+	// copy the parent into the child
+	// load the parent (if it has one) and copy into the child
+	if parentPath != "" {
+		if a.EditorMode && commonFormat != nil {
+			overrides := newChildOverrides()
+			a.ChildAssetOverrides[assetToLoadInto] = overrides
+			overrides.BuildFromCommonFormat(commonFormat)
 		}
+
+		parent, err := a.Load(parentPath)
+		if err != nil {
+			return nil, err
+		}
+		// we don't want the common format for a pointer to the parent, but
+		// to the real struct
+		parentConcrete := reflect.ValueOf(parent).Elem().Interface()
+		parentInCommonFormat := a.toCommonFormat(parentConcrete)
+		a.loadFromCommonFormat(assetType, "", parentInCommonFormat, assetToLoadInto)
+
+		// set the parent for this asset
+		a.ChildToParent[assetToLoadInto] = parentPath
 	}
 
 	var err error
@@ -136,7 +141,9 @@ func (a *assetManagerImpl) loadFromCommonFormat(
 }
 
 func (a *assetManagerImpl) unmarshalCommonFormat(data any, v any) error {
-	return a.unmarshalCommonFormatFromValues(reflect.ValueOf(data), reflect.ValueOf(v).Elem())
+	overrides := a.ChildAssetOverrides[v.(Asset)]
+	context := &commonFormatContext{}
+	return a.unmarshalCommonFormatFromValues(reflect.ValueOf(data), reflect.ValueOf(v).Elem(), overrides, context)
 }
 
 func safeLen(value reflect.Value) int {
@@ -152,9 +159,13 @@ func safeLen(value reflect.Value) int {
 // unmarshalCommonFormatFromValues accepts a source Value in Common format and a concrete
 // Go type in dest.
 // Common Format erases some type information about structs, so dest is reflected to recover types.
-func (a *assetManagerImpl) unmarshalCommonFormatFromValues(source reflect.Value, dest reflect.Value) error {
-	//fmt.Printf("source:%#v \nsettable? %v \nkind %s\n", source, source.CanSet(), source.Kind())
-	//fmt.Printf("dest:%#v \nkind %s\n-----\n", dest, dest.Kind())
+func (a *assetManagerImpl) unmarshalCommonFormatFromValues(
+	source reflect.Value,
+	dest reflect.Value,
+	overrides *childOverrides,
+	context *commonFormatContext) error {
+	fmt.Printf("source:%#v \nkind %s\n", source, source.Kind())
+	fmt.Printf("dest:%#v \nkind %s\n-----\n", dest, dest.Kind())
 	t := dest.Type()
 	switch dest.Kind() {
 	case reflect.Interface:
@@ -179,7 +190,17 @@ func (a *assetManagerImpl) unmarshalCommonFormatFromValues(source reflect.Value,
 			json.Unmarshal(b, &diskLoadFormat)
 		}
 
-		loadPathInfo, isLoadPath := source.Interface().(map[string]any)
+		var isLoadPath bool
+		var loadPathInfo map[string]any
+		if loadPath, ok := source.Interface().(*assetLoadPath); ok {
+			loadPathInfo = map[string]any{"Path": string(loadPath.Path)}
+			isLoadPath = true
+		}
+
+		if loadPath, ok := source.Interface().(map[string]any); ok {
+			loadPathInfo = loadPath
+			isLoadPath = true
+		}
 		if !isLoadPath && !isDiskFormat {
 			return fmt.Errorf("unable to cast %v to map[string]any, OR to onDiskLoadFormat", source)
 		}
@@ -217,19 +238,23 @@ func (a *assetManagerImpl) unmarshalCommonFormatFromValues(source reflect.Value,
 
 	case reflect.Struct:
 		for i := 0; i < t.NumField(); i++ {
-			if !t.Field(i).IsExported() {
-				continue
-			}
-			fieldToSet := dest.Field(i)
-			name := t.Field(i).Name
-			key := reflect.ValueOf(name)
-			dataToRead := source.MapIndex(key)
+			func(field reflect.StructField) {
+				context.Push(&field)
+				defer context.Pop()
+				if !field.IsExported() {
+					return
+				}
+				fieldToSet := dest.Field(i)
+				name := field.Name
+				key := reflect.ValueOf(name)
+				dataToRead := source.MapIndex(key)
 
-			if dataToRead.Kind() == reflect.Invalid {
-				//log.Printf("dataToRead for key (%s) is missing, skipping", key)
-				continue
-			}
-			a.unmarshalCommonFormatFromValues(dataToRead.Elem(), fieldToSet)
+				if dataToRead.Kind() == reflect.Invalid {
+					//log.Printf("dataToRead for key (%s) is missing, skipping", key)
+					return
+				}
+				a.unmarshalCommonFormatFromValues(dataToRead.Elem(), fieldToSet, overrides, context)
+			}(t.Field(i))
 		}
 	case reflect.Slice:
 		l := safeLen(source)
@@ -251,7 +276,7 @@ func (a *assetManagerImpl) unmarshalCommonFormatFromValues(source reflect.Value,
 				indexToSet := dest.Index(i)
 				dataToRead := source.Index(i)
 				//fmt.Printf("Array Data %v\n", dataToRead)
-				a.unmarshalCommonFormatFromValues(dataToRead.Elem(), indexToSet)
+				a.unmarshalCommonFormatFromValues(dataToRead.Elem(), indexToSet, overrides, context)
 			}
 		}
 	default:

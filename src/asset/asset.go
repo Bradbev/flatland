@@ -81,6 +81,13 @@ func RegisterWritableFileSystem(filesystem WriteableFileSystem) error {
 	return nil
 }
 
+// SetEditorMode informs the asset package that it is being used in an
+// editor context.  For example when enabled extra meta data about
+// which fields a child asset overrides must be saved.
+func SetEditorMode() {
+	assetManager.EditorMode = true
+}
+
 func RegisterAssetFactory(zeroAsset any, factoryFunction FactoryFunc) {
 	assetManager.RegisterAssetFactory(zeroAsset, factoryFunction)
 }
@@ -160,8 +167,9 @@ func FilterAssetDescriptorsByReflectType(typ reflect.Type) []*AssetDescriptor {
 	return assetManager.FilterAssetDescriptorsByType(typ)
 }
 
-func Reset() {
+func ResetForTest() {
 	assetManager = newAssetManagerImpl()
+	assetManager.EditorMode = true
 }
 
 func GetAssetDescriptors() []*AssetDescriptor {

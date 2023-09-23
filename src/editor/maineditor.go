@@ -62,6 +62,8 @@ type Drawable interface {
 var closeDrawable = errors.New("Close")
 
 func New(path string, manager *renderer.Manager) *ImguiEditor {
+	asset.SetEditorMode()
+
 	ed := &ImguiEditor{
 		Manager:    manager,
 		typeEditor: newTypeEditor(),

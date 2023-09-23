@@ -29,7 +29,7 @@ func (a *assetManagerImpl) Save(path Path, toSave Asset) error {
 	a.AssetToLoadPath[toSave] = path
 	a.LoadPathToAsset[path] = toSave
 
-	a.reloadChildAssets(path)
+	a.reloadChildAssets(path, toSave)
 	return nil
 }
 
@@ -76,13 +76,15 @@ func (a *assetManagerImpl) toDiskFormat(toSave Asset) (*onDiskSaveFormat, error)
 	return &container, nil
 }
 
-// reloadChildAssets walks all children assets and force-reloads them.
+// reloadChildAssets walks all children assets and force-reload
 // Intended to be called after a parent asset has been saved.
-func (a *assetManagerImpl) reloadChildAssets(path Path) {
+func (a *assetManagerImpl) reloadChildAssets(path Path, parent Asset) {
 	for childAsset, parentPath := range a.ChildToParent {
 		if path == parentPath {
-			childPath := a.AssetToLoadPath[childAsset]
-			a.LoadWithOptions(childPath, LoadOptions{ForceReload: true})
+			overrides := a.ChildAssetOverrides[childAsset]
+			child := a.toCommonFormatInternal(childAsset, &commonFormatContext{overrides: overrides})
+			desc := a.GetAssetDescriptor(childAsset)
+			a.loadFromCommonFormat(desc.FullName, path, child, childAsset)
 		}
 	}
 }
@@ -92,23 +94,35 @@ type assetLoadPath struct {
 	Path Path
 }
 
-type buildJsonContext struct {
-	stack []*reflect.StructField
+type commonFormatContext struct {
+	stack     []*reflect.StructField
+	overrides *childOverrides
 }
 
-func (b *buildJsonContext) Push(sf *reflect.StructField) {
+func (b *commonFormatContext) Push(sf *reflect.StructField) {
 	b.stack = append(b.stack, sf)
 }
 
-func (b *buildJsonContext) Pop() {
+func (b *commonFormatContext) Pop() {
 	b.stack = b.stack[:len(b.stack)-1]
 }
 
-func (b *buildJsonContext) Peek() *reflect.StructField {
+func (b *commonFormatContext) Peek() *reflect.StructField {
 	if len(b.stack) > 0 {
 		return b.stack[len(b.stack)-1]
 	}
 	return nil
+}
+
+func (b *commonFormatContext) StackPath() string {
+	var result strings.Builder
+	for i, field := range b.stack {
+		result.WriteString(field.Name)
+		if i < len(b.stack)-1 {
+			result.WriteString(".")
+		}
+	}
+	return result.String()
 }
 
 // toCommonFormat takes an object and converts it to the internal Common format
@@ -125,13 +139,15 @@ func (b *buildJsonContext) Peek() *reflect.StructField {
 //   - slices of bytes are uuencoded to strings
 //   - everything else remains the same
 func (a *assetManagerImpl) toCommonFormat(obj any) any {
-	return a.toCommonFormatInternal(obj, &buildJsonContext{})
+	return a.toCommonFormatInternal(obj, &commonFormatContext{})
 }
 
-func (a *assetManagerImpl) toCommonFormatInternal(obj any, context *buildJsonContext) any {
+func (a *assetManagerImpl) toCommonFormatInternal(obj any, context *commonFormatContext) any {
 	if obj == nil {
 		return nil
 	}
+	path := context.StackPath()
+	isPathOverridden := context.overrides == nil || context.overrides.PathHasOverride(path)
 	t := reflect.TypeOf(obj)
 	switch t.Kind() {
 	case reflect.Pointer:
@@ -147,12 +163,14 @@ func (a *assetManagerImpl) toCommonFormatInternal(obj any, context *buildJsonCon
 		// save references to known assets
 		if path, ok := a.AssetToLoadPath[obj]; ok {
 			_, fullname := ObjectTypeName(obj)
-			return assetLoadPath{
+			return &assetLoadPath{
 				Type: fullname,
 				Path: path,
 			}
 		}
-		return nil
+		log.Printf("Field '%s' will not be saved.  Pointer is not inline, nor to a known asset", context.StackPath())
+		return a.toCommonFormatInternal(reflect.ValueOf(obj).Elem().Interface(), context)
+		//		return nil
 	case reflect.Struct:
 		m := map[string]any{}
 		v := reflect.ValueOf(obj)
@@ -163,11 +181,17 @@ func (a *assetManagerImpl) toCommonFormatInternal(obj any, context *buildJsonCon
 			}
 			field := v.Field(i)
 			context.Push(&structField)
-			m[structField.Name] = a.toCommonFormatInternal(field.Interface(), context)
+			c := a.toCommonFormatInternal(field.Interface(), context)
+			if c != nil {
+				m[structField.Name] = c
+			}
 			context.Pop()
 		}
 		return m
 	case reflect.Slice:
+		if !isPathOverridden {
+			return nil
+		}
 		v := reflect.ValueOf(obj)
 		l := v.Len()
 		if l > 0 && v.Index(0).Kind() == reflect.Uint8 {
@@ -184,6 +208,9 @@ func (a *assetManagerImpl) toCommonFormatInternal(obj any, context *buildJsonCon
 			return s
 		}
 	default:
+		if !isPathOverridden {
+			return nil
+		}
 		return obj
 	}
 }

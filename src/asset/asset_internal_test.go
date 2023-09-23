@@ -6,6 +6,7 @@ import (
 	"reflect"
 	"testing"
 
+	"github.com/psanford/memfs"
 	"github.com/stretchr/testify/assert"
 )
 
@@ -249,4 +250,122 @@ func TestGetFlatTag(t *testing.T) {
 		assert.True(t, exists, "Key %s must exist", entry.key)
 		assert.Equal(t, entry.expectedValue, value)
 	}
+}
+
+type writeFS struct {
+	fs *memfs.FS
+}
+
+func newWriteFS() *writeFS {
+	return &writeFS{
+		fs: memfs.New(),
+	}
+}
+
+func (f *writeFS) WriteFile(path Path, data []byte) error {
+	return f.fs.WriteFile(string(path), data, 0777)
+}
+
+type testAssetParent struct {
+	StrA string
+	StrB string
+}
+
+// childContainer simulates the World object - that is, inline
+// children who have parents
+type childContainer struct {
+	Children []*testAssetParent `flat:"inline"`
+}
+
+type testMemberPathCreations struct {
+	First struct {
+		Second int
+		Next   struct{ Last int }
+	}
+	Third int
+}
+
+func TestCreatePathsFromCommonFormat(t *testing.T) {
+	c := assetManager.toCommonFormat(testMemberPathCreations{})
+
+	o := newChildOverrides()
+	o.BuildFromCommonFormat(c)
+
+	expectedPaths := []string{
+		"First.Second",
+		"First.Next.Last",
+		"Third",
+	}
+	for _, p := range expectedPaths {
+		assert.True(t, o.PathHasOverride(p))
+	}
+	assert.Len(t, o.overrides, len(expectedPaths))
+}
+
+func TestParentLoadingSavingSetting(t *testing.T) {
+	rootFS := newWriteFS()
+	reset := func() {
+		ResetForTest()
+		RegisterFileSystem(rootFS.fs, 0)
+		RegisterWritableFileSystem(rootFS)
+		RegisterAsset(testAssetParent{})
+		RegisterAsset(childContainer{})
+	}
+
+	{ // save to the FS
+		reset()
+		parent := &testAssetParent{
+			StrA: "ParentA",
+			StrB: "ParentB",
+		}
+		err := Save("parent.json", parent)
+		assert.NoError(t, err)
+
+		child := &childContainer{}
+		child.Children = append(child.Children, &testAssetParent{
+			StrA: "ParentA",
+			StrB: "ChildB",
+		})
+		SetParent(child.Children[0], parent)
+		overrides := assetManager.ChildAssetOverrides[child.Children[0]]
+		assert.NotNil(t, overrides)
+		assert.False(t, overrides.PathHasOverride("StrA"), "When a parent is set, any values that match the parent will be inherited")
+		assert.True(t, overrides.PathHasOverride("StrB"), "When a parent is set, any values that match the parent will be inherited")
+
+		err = Save("child.json", child)
+		assert.NoError(t, err)
+	}
+
+	// load them
+	{
+		reset()
+
+		loadedChild, err := Load("child.json")
+		assert.NoError(t, err)
+		child := loadedChild.(*childContainer)
+
+		overrides := assetManager.ChildAssetOverrides[child.Children[0]]
+		assert.NotNil(t, overrides)
+		assert.False(t, overrides.PathHasOverride("StrA"), "When a parent is set, any values that match the parent will be inherited")
+		assert.True(t, overrides.PathHasOverride("StrB"), "When a parent is set, any values that match the parent will be inherited")
+
+		expected := &testAssetParent{
+			StrA: "ParentA",
+			StrB: "ChildB",
+		}
+		assert.Equal(t, expected, child.Children[0])
+
+		loadedParent, err := Load("parent.json")
+		assert.NoError(t, err)
+		parent := loadedParent.(*testAssetParent)
+		parent.StrA = "ChangedParent"
+		Save("parent.json", parent)
+
+		// WORKMARK - reloading child assets needs to work
+		// Overrides need to be respected when loading
+		expected.StrA = "ChangedParent"
+		assert.Equal(t, expected, child.Children[0])
+
+	}
+
 }

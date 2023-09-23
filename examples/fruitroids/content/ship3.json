@@ -29,13 +29,14 @@
             "ComponentBase": {
               "Transform": {
                 "Location": {
-                  "Y": 8
+                  "Y": 9
                 },
                 "ScaleX": 1,
                 "ScaleY": 1
               }
             },
-            "Radius": 32
+            "Radius": 32,
+            "ShowDebug": true
           }
         },
         {
@@ -68,7 +69,7 @@
         }
       ],
       "Transform": {
-        "Rotation": 342,
+        "Rotation": 341,
         "ScaleX": 0.5,
         "ScaleY": 0.5
       }

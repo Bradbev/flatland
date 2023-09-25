@@ -202,22 +202,25 @@ func (a *assetManagerImpl) GetAssetDescriptor(target Asset) *AssetDescriptor {
 	return a.AssetDescriptors[typeName]
 }
 
-// SetParent is used to set the parent of an Asset.
-// When an Asset is reparented, all values that are not overridden by the child
-// are copied in from the parent.  If there is no previous parent then the parent
-// and the child are diffed and in places where they differ the child will override
-// the parent.
 func (a *assetManagerImpl) SetParent(child Asset, parent Asset) error {
 	if !a.EditorMode {
 		panic("Must be in editor mode to call SetParent")
 	}
+
+	if parent == nil {
+		delete(a.ChildToParent, child)
+		delete(a.ChildAssetOverrides, child)
+		return nil
+	}
+
 	parentPath, ok := a.AssetToLoadPath[parent]
 	if !ok {
 		return fmt.Errorf("parent is not a loaded asset %v", parent)
 	}
 
-	// no parent case
-	if _, hasParent := a.ChildToParent[child]; !hasParent {
+	_, hadParent := a.ChildToParent[child]
+	if !hadParent {
+		// no parent case
 		diffs := a.findDiffsFromParent(parent, child)
 		if diffs != nil {
 			overrides := newChildOverrides()
@@ -227,7 +230,15 @@ func (a *assetManagerImpl) SetParent(child Asset, parent Asset) error {
 	}
 
 	a.ChildToParent[child] = parentPath
+	if hadParent {
+		a.refreshParentValuesForChild(child, parentPath)
+	}
+
 	return nil
+}
+
+func (a *assetManagerImpl) GetParent(child Asset) Path {
+	return a.ChildToParent[child]
 }
 
 type OverrideEnableType uint8
@@ -241,6 +252,14 @@ func SetChildOverrideForField(child Asset, pathToField string, enable OverrideEn
 	return assetManager.SetChildOverrideForField(child, pathToField, enable)
 }
 
+func ChildOverridesField(child Asset, pathToField string) bool {
+	overrides := assetManager.ChildAssetOverrides[child]
+	if overrides == nil {
+		return false
+	}
+	return overrides.PathHasOverride(pathToField)
+}
+
 func (a *assetManagerImpl) SetChildOverrideForField(child Asset, pathToField string, enable OverrideEnableType) error {
 	overrides := a.ChildAssetOverrides[child]
 	if enable == OverrideEnable {
@@ -252,9 +271,6 @@ func (a *assetManagerImpl) SetChildOverrideForField(child Asset, pathToField str
 	}
 	if enable == OverrideDisable && overrides != nil {
 		overrides.RemovePath(pathToField)
-		if overrides.Empty() {
-			delete(a.ChildAssetOverrides, child)
-		}
 		if parentPath, ok := a.ChildToParent[child]; ok {
 			a.refreshParentValuesForChild(child, parentPath)
 		}

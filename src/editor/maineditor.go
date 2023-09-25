@@ -150,7 +150,7 @@ func (e *ImguiEditor) EditAsset(path string) {
 		return
 	}
 
-	aew := newAssetEditWindow(path, loaded, NewTypeEditContext(e, path))
+	aew := newAssetEditWindow(path, loaded, NewTypeEditContext(e, path, loaded))
 
 	e.AddDrawable(aew)
 }

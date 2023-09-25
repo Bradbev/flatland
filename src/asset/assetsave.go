@@ -34,11 +34,8 @@ func (a *assetManagerImpl) Save(path Path, toSave Asset) error {
 }
 
 // toDiskFormat converts toSave into Common format and wraps it with
-// a into the on-disk format
+// the on-disk format
 func (a *assetManagerImpl) toDiskFormat(toSave Asset) (*onDiskSaveFormat, error) {
-	if assetManager.WriteFS == nil {
-		return nil, fmt.Errorf("Can't Save asset - no writable FS")
-	}
 	// toSave must be a pointer, but the top level needs to be
 	// saved as a struct
 	if reflect.TypeOf(toSave).Kind() != reflect.Pointer {
@@ -88,7 +85,12 @@ func (a *assetManagerImpl) reloadChildAssets(path Path, parent Asset) {
 
 func (a *assetManagerImpl) refreshParentValuesForChild(childAsset Asset, parentPath Path) {
 	overrides := a.ChildAssetOverrides[childAsset]
-	child := a.toCommonFormatInternal(childAsset, &commonFormatContext{overrides: overrides})
+
+	// we don't to convert the *interface* to commonFormat, we want the
+	// struct that the asset is really referring to in commonFormat
+	c := reflect.ValueOf(childAsset).Elem().Interface()
+	child := a.toCommonFormatInternal(c, &commonFormatContext{overrides: overrides})
+
 	desc := a.GetAssetDescriptor(childAsset)
 	a.loadFromCommonFormat(desc.FullName, parentPath, child, childAsset)
 }
@@ -173,8 +175,8 @@ func (a *assetManagerImpl) toCommonFormatInternal(obj any, context *commonFormat
 			}
 		}
 		log.Printf("Field '%s' will not be saved.  Pointer is not inline, nor to a known asset", context.StackPath())
-		return a.toCommonFormatInternal(reflect.ValueOf(obj).Elem().Interface(), context)
-		//		return nil
+		//return a.toCommonFormatInternal(reflect.ValueOf(obj).Elem().Interface(), context)
+		return nil
 	case reflect.Struct:
 		m := map[string]any{}
 		v := reflect.ValueOf(obj)

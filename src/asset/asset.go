@@ -131,11 +131,20 @@ func Save(path Path, toSave Asset) error {
 	return assetManager.Save(path, toSave)
 }
 
+// SetParent is used to set the parent of an Asset.
+// When an Asset is reparented, all values that are not overridden by the child
+// are copied in from the parent.  If there is no previous parent then the parent
+// and the child are diffed and in places where they differ the child will override
+// the parent.
 func SetParent(child Asset, parent Asset) error {
 	return assetManager.SetParent(child, parent)
 }
 
-func LoadPathForAsset(a Asset) (Path, error) {
+func GetParent(child Asset) Path {
+	return assetManager.GetParent(child)
+}
+
+func GetLoadPathForAsset(a Asset) (Path, error) {
 	path, ok := assetManager.AssetToLoadPath[a]
 	if !ok {
 		return path, fmt.Errorf("Asset not loaded")
@@ -174,6 +183,11 @@ func ResetForTest() {
 
 func GetAssetDescriptors() []*AssetDescriptor {
 	return assetManager.AssetDescriptorList
+}
+
+func GetDescriptorForAsset(asset Asset) *AssetDescriptor {
+	_, typeName := ObjectTypeName(asset)
+	return assetManager.AssetDescriptors[typeName]
 }
 
 func ObjectTypeName(obj any) (name string, fullname string) {

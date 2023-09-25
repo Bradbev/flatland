@@ -381,4 +381,28 @@ func TestParentLoadingSavingSetting(t *testing.T) {
 		expected.StrA = "ChangedParent"
 		assert.Equal(t, expected, child.Children[0], "The child value is back to the parent")
 	}
+
+	{
+		reset()
+		parent2 := &testAssetParent{
+			StrA: "Parent2A",
+			StrB: "Parent2B",
+		}
+		err := Save("parent2.json", parent2)
+		assert.NoError(t, err)
+
+		loadedChild, err := Load("child.json")
+		assert.NoError(t, err)
+		child := loadedChild.(*childContainer)
+
+		expected := &testAssetParent{
+			StrA: "ChangedParent",
+			StrB: "ChildB",
+		}
+		assert.Equal(t, expected, child.Children[0])
+
+		SetParent(child.Children[0], parent2)
+		expected.StrA = "Parent2A"
+		assert.Equal(t, expected, child.Children[0])
+	}
 }

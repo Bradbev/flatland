@@ -9,6 +9,7 @@ import (
 type Actor interface {
 	Transformer
 	Component
+	Playable
 	IsActor()
 }
 
@@ -59,17 +60,27 @@ type ActorBase struct {
 	Components           []Component `flat:"inline"`
 	updateableComponents []Updateable
 	drawableComponents   []Drawable
-	beginPlayWasCalled   bool
 }
 
+// EmptyActor can be used when you need an actor that is entirely defined
+// by its components
+type EmptyActor struct {
+	ActorBase
+}
+
+func (a *EmptyActor) BeginPlay() {
+	a.ActorBase.BeginPlay(a)
+}
+
+var _ Actor = (*EmptyActor)(nil)
+
 // "static assert" that ActorBase implements Actor
-var _ Actor = (*ActorBase)(nil)
+// var _ Actor = (*ActorBase)(nil)
 var _ Component = (*ActorBase)(nil)
 
 func (a *ActorBase) reset() {
 	a.updateableComponents = nil
 	a.drawableComponents = nil
-	a.beginPlayWasCalled = false
 }
 func (a *ActorBase) SetOwner(o Component) {
 	if o != nil {
@@ -80,9 +91,9 @@ func (a *ActorBase) Owner() Component                { return nil }
 func (a *ActorBase) SetComponents(comps []Component) { a.Components = comps }
 func (a *ActorBase) GetComponents() []Component      { return a.Components }
 
+// BeginPlay must be called
 func (a *ActorBase) BeginPlay(rootParent Actor) {
 	a.reset()
-	a.beginPlayWasCalled = true
 	for _, component := range a.Components {
 		if component == nil {
 			continue
@@ -112,7 +123,6 @@ func (a *ActorBase) GetTransform() *Transform {
 }
 
 func (a *ActorBase) Update() {
-	Assert(a.beginPlayWasCalled, "BeginPlay(actor) must be called before update (usually in your own BeginPlay) if you wish to use ActorBase")
 	for _, updateable := range a.updateableComponents {
 		updateable.Update()
 	}

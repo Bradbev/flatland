@@ -26,6 +26,8 @@ type TypeEditContext struct {
 
 	assetPath string
 
+	targetAsset asset.Asset
+
 	// editContext is where GetContext saves its data
 	editContext map[unsafe.Pointer]map[reflect.Type]any
 
@@ -36,10 +38,11 @@ type TypeEditContext struct {
 	hasChanged bool
 }
 
-func NewTypeEditContext(ed *ImguiEditor, assetPath string) *TypeEditContext {
+func NewTypeEditContext(ed *ImguiEditor, assetPath string, target asset.Asset) *TypeEditContext {
 	return &TypeEditContext{
 		Ed:               ed,
 		assetPath:        assetPath,
+		targetAsset:      target,
 		editContext:      map[unsafe.Pointer]map[reflect.Type]any{},
 		structFieldStack: []*reflect.StructField{},
 	}
@@ -79,6 +82,17 @@ func (c *TypeEditContext) StructField() *reflect.StructField {
 		return nil
 	}
 	return c.structFieldStack[len(c.structFieldStack)-1]
+}
+
+func (c *TypeEditContext) FieldPathStackName() string {
+	result := ""
+	for i, sf := range c.structFieldStack {
+		result += sf.Name
+		if i < len(c.structFieldStack)-1 {
+			result += "."
+		}
+	}
+	return result
 }
 
 func (c *TypeEditContext) ID(prefix string) string {
@@ -357,7 +371,7 @@ func interfaceEd(context *TypeEditContext, value reflect.Value) error {
 	if firstTime {
 		c.auto = &edgui.AutoComplete{}
 		if !value.IsNil() {
-			path, err := asset.LoadPathForAsset(value.Interface())
+			path, err := asset.GetLoadPathForAsset(value.Interface())
 			if err == nil {
 				c.input = string(path)
 				c.lastInput = c.input
@@ -421,6 +435,19 @@ func StructEd(context *TypeEditContext, value reflect.Value) error {
 
 						imgui.TableNextColumn()
 						context.EditValue(field.Addr())
+
+						// revert button
+						if asset.ChildOverridesField(context.targetAsset, context.FieldPathStackName()) {
+							imgui.SameLine()
+							if imgui.Button("¬") {
+								asset.SetChildOverrideForField(context.targetAsset, context.FieldPathStackName(), asset.OverrideDisable)
+							}
+							if imgui.IsItemHovered() {
+								imgui.BeginTooltip()
+								imgui.Text("Revert to parent value")
+								imgui.EndTooltip()
+							}
+						}
 					}
 				}
 			}()

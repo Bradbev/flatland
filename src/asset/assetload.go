@@ -188,6 +188,7 @@ func (a *assetManagerImpl) unmarshalCommonFormatFromValues(
 			json.Unmarshal(b, &diskLoadFormat)
 		}
 
+		// Same quirk as above
 		var isLoadPath bool
 		var loadPathInfo map[string]any
 		if loadPath, ok := source.Interface().(*assetLoadPath); ok {

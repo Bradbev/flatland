@@ -11,9 +11,10 @@ import (
 )
 
 type assetEditWindow struct {
-	target  asset.Asset
-	path    string
-	context *TypeEditContext
+	target      asset.Asset
+	path        string
+	context     *TypeEditContext
+	selectModal edgui.SelectAssetModal
 }
 
 func newAssetEditWindow(path string, target asset.Asset, context *TypeEditContext) *assetEditWindow {
@@ -25,6 +26,10 @@ func newAssetEditWindow(path string, target asset.Asset, context *TypeEditContex
 		path:    path,
 		target:  target,
 		context: context,
+		selectModal: edgui.SelectAssetModal{
+			Title: "Select Parent",
+			Type:  reflect.TypeOf(target),
+		},
 	}
 }
 
@@ -35,7 +40,6 @@ func (a *assetEditWindow) Draw() error {
 		enabled := a.context.hasChanged
 		reload := false
 		edgui.WithDisabled(!enabled, func() {
-			imgui.SameLineV(0, imgui.WindowWidth()-180)
 			if imgui.Button("Save") && enabled {
 				asset.Save(asset.Path(a.path), a.target)
 				a.context.hasChanged = false
@@ -65,6 +69,33 @@ func (a *assetEditWindow) Draw() error {
 				playable.BeginPlay()
 			}
 		}
+		imgui.SameLine()
+		if imgui.Button("Set Parent") {
+			a.selectModal.Open()
+		}
+		if a.selectModal.DrawWithExtraHeaderUI(func() {
+			imgui.SameLine()
+			if imgui.Button("Set No Parent") {
+				asset.SetParent(a.target, nil)
+				imgui.CloseCurrentPopup()
+			}
+		}) {
+			newParentPath := a.selectModal.SelectedPath()
+			currentParentPath := asset.GetParent(a.target)
+			if a.path != newParentPath && newParentPath != string(currentParentPath) {
+				newParent, err := asset.Load(asset.Path(newParentPath))
+				flat.Check(err)
+				asset.SetParent(a.target, newParent)
+				a.context.SetChanged()
+			}
+		}
+
+		if parent := string(asset.GetParent(a.target)); parent != "" {
+			imgui.SameLine()
+			imgui.Text("Parent: " + parent)
+		}
+		imgui.Separator()
+
 		value := reflect.ValueOf(a.target)
 		a.context.EditValue(value)
 	}

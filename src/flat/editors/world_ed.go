@@ -25,7 +25,7 @@ func worldEd(context *editor.TypeEditContext, value reflect.Value) error {
 		c.buildWorldTree()
 		c.addDialog = &addDialog{Title: "Add Actor##uniqueID"}
 		c.addDialog.Context = c
-		//		world.BeginPlay()
+		world.BeginPlay()
 	}
 	flags := imgui.TableFlagsSizingStretchSame |
 		imgui.TableFlagsResizable |
@@ -74,12 +74,22 @@ func (w *worldEdContext) renderWorld(context *editor.TypeEditContext, value refl
 
 type worldTreeHandler struct {
 	context *worldEdContext
+	root    *worldTreeNode
 }
 
 func (wt *worldTreeHandler) Clicked(node edgui.TreeNode) {
-	toEdit := node.(*worldTreeNode).actor
-	wt.context.actorToEdit = toEdit
-	wt.context.valueToEdit = reflect.ValueOf(toEdit).Elem()
+	n := node.(*worldTreeNode)
+	if n.name != "Root" {
+		toEdit := n.actor
+		edgui.WalkTree(wt.root, nil, func(node edgui.TreeNode, context any) {
+			if node != nil {
+				node.(*worldTreeNode).selected = false
+			}
+		})
+		n.selected = true
+		wt.context.actorToEdit = toEdit
+		wt.context.valueToEdit = reflect.ValueOf(toEdit).Elem()
+	}
 }
 
 func (w *worldEdContext) renderOutliner(context *editor.TypeEditContext, value reflect.Value) {
@@ -94,6 +104,7 @@ func (w *worldEdContext) renderOutliner(context *editor.TypeEditContext, value r
 
 	edgui.DrawTree(w.root, &worldTreeHandler{
 		context: w,
+		root:    w.root,
 	})
 
 	imgui.Separator()
@@ -119,10 +130,21 @@ func (w *worldEdContext) buildWorldTree() {
 		name: "Root",
 	}
 	for _, actor := range w.world.PersistentActors {
-		name, _ := asset.ObjectTypeName(actor)
+		nodeName := ""
+		if name, _ := asset.GetLoadPathForAsset(actor); name != "" {
+			nodeName = string(name)
+		}
+		if nodeName == "" {
+			if parentPath := asset.GetParent(actor); parentPath != "" {
+				nodeName = string(parentPath)
+			}
+		}
+		if nodeName == "" {
+			nodeName, _ = asset.ObjectTypeName(actor)
+		}
 		w.root.children = append(w.root.children,
 			&worldTreeNode{
-				name:  name,
+				name:  nodeName,
 				actor: actor,
 			})
 	}

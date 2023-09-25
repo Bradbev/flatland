@@ -50,13 +50,14 @@ func main() {
 	//asset.Save("testedit.json", &defaultTestObject)
 	//gg.ed.EditAsset("testedit.json")
 
+	defaultTestObjectChild = defaultTestObject
+	asset.SetParent(&defaultTestObjectChild, &defaultTestObject)
 	//asset.Save("childedit.json", &defaultTestObjectChild)
-	//asset.SetParent(&defaultTestObjectChild, &defaultTestObject)
-	//gg.ed.EditAsset("childedit.json")
+	gg.ed.EditAsset("childedit.json")
 
 	//gg.ed.EditAsset("actorTest.json")
 	//gg.ed.EditAsset("font.json")
-	gg.ed.EditAsset("world.json")
+	//gg.ed.EditAsset("world.json")
 
 	menu := edgui.Menu{
 		Name: "Custom Item",
@@ -138,7 +139,8 @@ type EditTest struct {
 }
 
 var defaultTestObject = EditTest{
-	Slice: []int{7, 6},
+	Slice:  []int{7, 6},
+	String: "Default Test Object",
 }
 var defaultTestObjectChild = EditTest{}
 

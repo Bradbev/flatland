@@ -35,8 +35,7 @@
                 "ScaleY": 1
               }
             },
-            "Radius": 32,
-            "ShowDebug": true
+            "Radius": 32
           }
         },
         {

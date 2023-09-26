@@ -25,7 +25,6 @@ func worldEd(context *editor.TypeEditContext, value reflect.Value) error {
 		c.buildWorldTree()
 		c.addDialog = &addDialog{Title: "Add Actor##uniqueID"}
 		c.addDialog.Context = c
-		world.BeginPlay()
 	}
 	flags := imgui.TableFlagsSizingStretchSame |
 		imgui.TableFlagsResizable |
@@ -101,6 +100,19 @@ func (w *worldEdContext) renderOutliner(context *editor.TypeEditContext, value r
 		w.buildWorldTree()
 		context.SetChanged()
 	}
+	edgui.WithDisabled(w.actorToEdit == nil, func() {
+		imgui.SameLine()
+		if imgui.Button("Remove") {
+			w.world.PersistentActors = slices.DeleteFunc(w.world.PersistentActors, func(a flat.Actor) bool {
+				return a == w.actorToEdit
+			})
+			w.world.RemoveFromWorld(w.actorToEdit)
+			w.actorToEdit = nil
+			w.valueToEdit = reflect.Value{}
+			w.buildWorldTree()
+			context.SetChanged()
+		}
+	})
 
 	edgui.DrawTree(w.root, &worldTreeHandler{
 		context: w,
@@ -168,11 +180,12 @@ func (c *worldTreeNode) Expanded() bool             { return true }
 func (c *worldTreeNode) Selected() bool             { return c.selected }
 
 type addDialog struct {
-	Title        string
-	Context      *worldEdContext
-	open         bool
-	selectedItem *addAssetItem
-	list         edgui.FilteredList[*addAssetItem]
+	Title            string
+	Context          *worldEdContext
+	open             bool
+	selectedItem     *addAssetItem
+	list             edgui.FilteredList[*addAssetItem]
+	wasDoubleClicked bool
 }
 
 func (a *addDialog) Clicked(node edgui.ListNode, index int) {
@@ -189,7 +202,9 @@ func (a *addDialog) Clicked(node edgui.ListNode, index int) {
 	a.selectedItem = assetItem
 }
 func (a *addDialog) DoubleClicked(node edgui.ListNode, index int) {
-
+	assetItem := node.(*addAssetItem)
+	a.selectedItem = assetItem
+	a.wasDoubleClicked = true
 }
 
 type addAssetItem struct {
@@ -207,6 +222,7 @@ func (a *addAssetItem) Selected() bool {
 
 func (a *addDialog) Open() {
 	a.open = true
+	a.wasDoubleClicked = false
 	imgui.OpenPopup(a.Title)
 
 	var items []*addAssetItem
@@ -227,7 +243,7 @@ func (a *addDialog) Draw() bool {
 	if imgui.BeginPopupModalV(a.Title, &a.open, imgui.WindowFlagsNone) {
 		defer imgui.EndPopup()
 		edgui.WithDisabled(a.selectedItem == nil, func() {
-			if imgui.Button("Add") {
+			if imgui.Button("Add") || a.wasDoubleClicked {
 				var actorToAdd flat.Actor
 				// an existing actor was selected.  Load it and set it as the parent
 				parent, err := asset.Load(asset.Path(a.selectedItem.assetPath))
@@ -237,6 +253,7 @@ func (a *addDialog) Draw() bool {
 				asset.SetParent(instance, parent)
 				actorToAdd = instance.(flat.Actor)
 
+				// Add the new actor to the world
 				world := a.Context.world
 				world.AddToWorld(actorToAdd)
 				world.PersistentActors = append(world.PersistentActors, actorToAdd)

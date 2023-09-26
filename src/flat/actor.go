@@ -37,8 +37,17 @@ type Drawable interface {
 // TODO - Need some other lifecycle hooks.
 // - Editor Construction?
 // - EndPlay?
+
+// Playable will be called right before a world is ready to run
+// and start ticking
 type Playable interface {
 	BeginPlay()
+}
+
+// EditorPlayable will be called by the editor instead of Begin play
+// in certain editor situations
+type EditorPlayable interface {
+	EditorBeginPlay()
 }
 
 type ComponentBase struct {

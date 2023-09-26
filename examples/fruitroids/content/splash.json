@@ -72,53 +72,14 @@
                     "Type": "github.com/bradbev/flatland/src/flat.Font",
                     "Path": "defaultFont.json"
                   },
-                  "TextTemplate": "Test"
+                  "TextTemplate": "Press Space to Start"
                 }
               }
             ],
             "Transform": {
               "Location": {
-                "X": 48,
-                "Y": 272
-              }
-            }
-          }
-        }
-      },
-      {
-        "Type": "github.com/bradbev/flatland/src/flat.EmptyActor",
-        "Parent": "textdefault.json",
-        "Inner": {
-          "ActorBase": {
-            "Components": [
-              {
-                "Type": "github.com/bradbev/flatland/src/flat.TextComponent",
-                "Parent": "",
-                "Inner": {
-                  "Color": {
-                    "A": 255,
-                    "B": 255,
-                    "G": 255,
-                    "R": 255
-                  },
-                  "ComponentBase": {
-                    "Transform": {
-                      "ScaleX": 1,
-                      "ScaleY": 1
-                    }
-                  },
-                  "Font": {
-                    "Type": "github.com/bradbev/flatland/src/flat.Font",
-                    "Path": "defaultFont.json"
-                  },
-                  "TextTemplate": "Testjkj"
-                }
-              }
-            ],
-            "Transform": {
-              "Location": {
-                "X": 147,
-                "Y": 199
+                "X": 74,
+                "Y": 293
               }
             }
           }

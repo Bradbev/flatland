@@ -17,11 +17,17 @@ type assetEditWindow struct {
 	selectModal edgui.SelectAssetModal
 }
 
-func newAssetEditWindow(path string, target asset.Asset, context *TypeEditContext) *assetEditWindow {
-	// TODO - this needs a different lifecycle hook
-	if playable, ok := target.(flat.Playable); ok {
+func callEditorBeginPlay(a any) {
+	if editorPlayable, ok := a.(flat.EditorPlayable); ok {
+		editorPlayable.EditorBeginPlay()
+	} else if playable, ok := a.(flat.Playable); ok {
 		playable.BeginPlay()
 	}
+}
+
+func newAssetEditWindow(path string, target asset.Asset, context *TypeEditContext) *assetEditWindow {
+	// TODO - this needs a different lifecycle hook
+	callEditorBeginPlay(target)
 	return &assetEditWindow{
 		path:    path,
 		target:  target,
@@ -48,9 +54,7 @@ func (a *assetEditWindow) Draw() error {
 			imgui.SameLine()
 			if imgui.Button("Revert") {
 				asset.LoadWithOptions(asset.Path(a.path), asset.LoadOptions{ForceReload: true})
-				if playable, ok := a.target.(flat.Playable); ok {
-					playable.BeginPlay()
-				}
+				callEditorBeginPlay(a.target)
 			}
 		})
 		imgui.SameLine()
@@ -65,9 +69,7 @@ func (a *assetEditWindow) Draw() error {
 					}
 				})
 			}
-			if playable, ok := a.target.(flat.Playable); ok {
-				playable.BeginPlay()
-			}
+			callEditorBeginPlay(a.target)
 		}
 		imgui.SameLine()
 		if imgui.Button("Set Parent") {

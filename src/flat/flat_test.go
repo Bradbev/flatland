@@ -13,13 +13,15 @@ func isActor(obj any) bool {
 	return ok
 }
 
-func TestEmbedding(t *testing.T) {
-	assert.True(t, isActor(&flat.ActorBase{}))
+type Foo struct {
+	flat.ActorBase
+	MoreStuff bool
+}
 
-	type Foo struct {
-		flat.ActorBase
-		MoreStuff bool
-	}
+func (f *Foo) BeginPlay() {}
+
+func TestEmbedding(t *testing.T) {
+	assert.False(t, isActor(&flat.ActorBase{}), "ActorBase isn't an Actor, because it doesn't implement BeginPlay")
 	assert.True(t, isActor(&Foo{}))
 }
 

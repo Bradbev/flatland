@@ -1,0 +1,90 @@
+{
+  "Type": "github.com/bradbev/flatland/src/flat.World",
+  "Parent": "",
+  "Inner": {
+    "PersistentActors": [
+      {
+        "Type": "github.com/bradbev/flatland/src/flat.EmptyActor",
+        "Parent": "textdefault.json",
+        "Inner": {
+          "ActorBase": {
+            "Components": [
+              {
+                "Type": "github.com/bradbev/flatland/src/flat.TextComponent",
+                "Parent": "",
+                "Inner": {
+                  "Color": {
+                    "A": 255,
+                    "B": 255,
+                    "G": 255,
+                    "R": 255
+                  },
+                  "ComponentBase": {
+                    "Transform": {
+                      "Location": {
+                        "X": -106,
+                        "Y": 20
+                      },
+                      "ScaleX": 1,
+                      "ScaleY": 1
+                    }
+                  },
+                  "Font": {
+                    "Type": "github.com/bradbev/flatland/src/flat.Font",
+                    "Path": "defaultFont.json"
+                  },
+                  "TextTemplate": "FRUITROIDS"
+                }
+              }
+            ],
+            "Transform": {
+              "Location": {
+                "X": 208,
+                "Y": 84
+              }
+            }
+          }
+        }
+      },
+      {
+        "Type": "github.com/bradbev/flatland/src/flat.EmptyActor",
+        "Parent": "textdefault.json",
+        "Inner": {
+          "ActorBase": {
+            "Components": [
+              {
+                "Type": "github.com/bradbev/flatland/src/flat.TextComponent",
+                "Parent": "",
+                "Inner": {
+                  "Color": {
+                    "A": 255,
+                    "B": 255,
+                    "G": 255,
+                    "R": 255
+                  },
+                  "ComponentBase": {
+                    "Transform": {
+                      "ScaleX": 1,
+                      "ScaleY": 1
+                    }
+                  },
+                  "Font": {
+                    "Type": "github.com/bradbev/flatland/src/flat.Font",
+                    "Path": "defaultFont.json"
+                  },
+                  "TextTemplate": "Press Space to Start"
+                }
+              }
+            ],
+            "Transform": {
+              "Location": {
+                "X": 74,
+                "Y": 293
+              }
+            }
+          }
+        }
+      }
+    ]
+  }
+}

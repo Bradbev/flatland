@@ -6,6 +6,7 @@ import (
 	"reflect"
 	"testing"
 
+	"github.com/psanford/memfs"
 	"github.com/stretchr/testify/assert"
 )
 
@@ -42,8 +43,8 @@ func TestBuildJsonToSave(t *testing.T) {
 		AssetToLoadPath: map[Asset]Path{},
 	}
 	a.AssetToLoadPath[&leaf] = "fullPath.json"
-	m := a.buildJsonToSave(node)
-	diffsFromParent := findDiffsFromParentJson(nil, m)
+	m := a.toCommonFormat(node)
+	diffsFromParent := findDiffsFromParentCommonFormat(nil, m)
 
 	j, err := json.MarshalIndent(diffsFromParent, "", "")
 	assert.NoError(t, err)
@@ -120,7 +121,7 @@ func TestUnmashallFromAny(t *testing.T) {
 			}
 		}()
 
-		a.unmarshalFromAny(toUnmarshal, &node)
+		a.unmarshalCommonFormat(toUnmarshal, &node)
 
 	}()
 
@@ -157,9 +158,9 @@ type jsmap = map[string]any
 func TestFindDiffsFromParent(t *testing.T) {
 	assetman := &assetManagerImpl{}
 	fd := func(a, b any) any {
-		r := findDiffsFromParentJson(
-			assetman.buildJsonToSave(a),
-			assetman.buildJsonToSave(b))
+		r := findDiffsFromParentCommonFormat(
+			assetman.toCommonFormat(a),
+			assetman.toCommonFormat(b))
 		//jsp("Return::::::", r)
 		return r
 	}
@@ -232,7 +233,7 @@ type TestTags struct {
 	A int `flat:"inline   ;  key:value   ;   desc:A long description ;  last:last value" other:"other value"`
 }
 
-func TestTagExtraction(t *testing.T) {
+func TestGetFlatTag(t *testing.T) {
 	sf, _ := reflect.TypeOf(TestTags{}).FieldByName("A")
 	table := []struct {
 		key           string
@@ -248,5 +249,160 @@ func TestTagExtraction(t *testing.T) {
 		value, exists := GetFlatTag(&sf, entry.key)
 		assert.True(t, exists, "Key %s must exist", entry.key)
 		assert.Equal(t, entry.expectedValue, value)
+	}
+}
+
+type writeFS struct {
+	fs *memfs.FS
+}
+
+func newWriteFS() *writeFS {
+	return &writeFS{
+		fs: memfs.New(),
+	}
+}
+
+func (f *writeFS) WriteFile(path Path, data []byte) error {
+	return f.fs.WriteFile(string(path), data, 0777)
+}
+
+type testAssetParent struct {
+	StrA string
+	StrB string
+}
+
+// childContainer simulates the World object - that is, inline
+// children who have parents
+type childContainer struct {
+	Children []*testAssetParent `flat:"inline"`
+}
+
+type testMemberPathCreations struct {
+	First struct {
+		Second int
+		Next   struct{ Last int }
+	}
+	Third int
+}
+
+func TestCreatePathsFromCommonFormat(t *testing.T) {
+	c := assetManager.toCommonFormat(testMemberPathCreations{})
+
+	o := newChildOverrides()
+	o.BuildFromCommonFormat(c)
+
+	expectedPaths := []string{
+		"First.Second",
+		"First.Next.Last",
+		"Third",
+	}
+	for _, p := range expectedPaths {
+		assert.True(t, o.PathHasOverride(p))
+	}
+	assert.Len(t, o.overrides, len(expectedPaths))
+}
+
+func TestParentLoadingSavingSetting(t *testing.T) {
+	rootFS := newWriteFS()
+	reset := func() {
+		ResetForTest()
+		RegisterFileSystem(rootFS.fs, 0)
+		RegisterWritableFileSystem(rootFS)
+		RegisterAsset(testAssetParent{})
+		RegisterAsset(childContainer{})
+	}
+
+	{ // save to the FS
+		reset()
+		parent := &testAssetParent{
+			StrA: "ParentA",
+			StrB: "ParentB",
+		}
+		err := Save("parent.json", parent)
+		assert.NoError(t, err)
+
+		child := &childContainer{}
+		child.Children = append(child.Children, &testAssetParent{
+			StrA: "ParentA",
+			StrB: "ChildB",
+		})
+		SetParent(child.Children[0], parent)
+		overrides := assetManager.ChildAssetOverrides[child.Children[0]]
+		assert.NotNil(t, overrides)
+		assert.False(t, overrides.PathHasOverride("StrA"), "When a parent is set, any values that match the parent will be inherited")
+		assert.True(t, overrides.PathHasOverride("StrB"), "When a parent is set, any values that match the parent will be inherited")
+
+		err = Save("child.json", child)
+		assert.NoError(t, err)
+	}
+
+	// load them
+	{
+		reset()
+
+		loadedChild, err := Load("child.json")
+		assert.NoError(t, err)
+		child := loadedChild.(*childContainer)
+
+		overrides := assetManager.ChildAssetOverrides[child.Children[0]]
+		assert.NotNil(t, overrides)
+		assert.False(t, overrides.PathHasOverride("StrA"), "When a parent is set, any values that match the parent will be inherited")
+		assert.True(t, overrides.PathHasOverride("StrB"), "When a parent is set, any values that match the parent will be inherited")
+
+		expected := &testAssetParent{
+			StrA: "ParentA",
+			StrB: "ChildB",
+		}
+		assert.Equal(t, expected, child.Children[0])
+
+		loadedParent, err := Load("parent.json")
+		assert.NoError(t, err)
+		parent := loadedParent.(*testAssetParent)
+		parent.StrA = "ChangedParent"
+		Save("parent.json", parent)
+
+		expected.StrA = "ChangedParent"
+		assert.Equal(t, expected, child.Children[0])
+
+		// change the child & resave the parent - child should change
+		child.Children[0].StrA = "Will be overridden on parent save"
+		Save("parent.json", parent)
+		assert.Equal(t, expected, child.Children[0], "The child value will be back to he parent")
+
+		// change child, mark it changed, save parent
+		child.Children[0].StrA = "Child Has Changed"
+		SetChildOverrideForField(child.Children[0], "StrA", OverrideEnable)
+		expected.StrA = child.Children[0].StrA
+		Save("parent.json", parent)
+		assert.Equal(t, expected, child.Children[0], "The child value will now save")
+
+		// revert the change, restore the child
+		SetChildOverrideForField(child.Children[0], "StrA", OverrideDisable)
+		expected.StrA = "ChangedParent"
+		assert.Equal(t, expected, child.Children[0], "The child value is back to the parent")
+	}
+
+	{
+		reset()
+		parent2 := &testAssetParent{
+			StrA: "Parent2A",
+			StrB: "Parent2B",
+		}
+		err := Save("parent2.json", parent2)
+		assert.NoError(t, err)
+
+		loadedChild, err := Load("child.json")
+		assert.NoError(t, err)
+		child := loadedChild.(*childContainer)
+
+		expected := &testAssetParent{
+			StrA: "ChangedParent",
+			StrB: "ChildB",
+		}
+		assert.Equal(t, expected, child.Children[0])
+
+		SetParent(child.Children[0], parent2)
+		expected.StrA = "Parent2A"
+		assert.Equal(t, expected, child.Children[0])
 	}
 }

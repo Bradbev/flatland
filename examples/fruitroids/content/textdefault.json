@@ -1,5 +1,5 @@
 {
-  "Type": "main.actorTest",
+  "Type": "github.com/bradbev/flatland/src/flat.EmptyActor",
   "Parent": "",
   "Inner": {
     "ActorBase": {
@@ -9,32 +9,26 @@
           "Parent": "",
           "Inner": {
             "Color": {
-              "B": 12,
-              "G": 12,
-              "R": 201
+              "A": 255,
+              "B": 255,
+              "G": 255,
+              "R": 255
             },
             "ComponentBase": {
               "Transform": {
-                "Location": {
-                  "X": -85
-                },
                 "ScaleX": 1,
                 "ScaleY": 1
               }
             },
             "Font": {
               "Type": "github.com/bradbev/flatland/src/flat.Font",
-              "Path": "font.json"
+              "Path": "defaultFont.json"
             },
-            "TextTemplate": "TestText"
+            "TextTemplate": "Test"
           }
         }
       ],
       "Transform": {
-        "Location": {
-          "X": 115,
-          "Y": 139
-        },
         "ScaleX": 1,
         "ScaleY": 1
       }

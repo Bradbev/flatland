@@ -29,7 +29,7 @@
             "ComponentBase": {
               "Transform": {
                 "Location": {
-                  "Y": 8
+                  "Y": 9
                 },
                 "ScaleX": 1,
                 "ScaleY": 1
@@ -39,7 +39,7 @@
           }
         },
         {
-          "Type": "github.com/bradbev/flatland/src/flat.Text",
+          "Type": "github.com/bradbev/flatland/src/flat.TextComponent",
           "Parent": "",
           "Inner": {
             "Color": {
@@ -68,7 +68,7 @@
         }
       ],
       "Transform": {
-        "Rotation": 342,
+        "Rotation": 341,
         "ScaleX": 0.5,
         "ScaleY": 0.5
       }

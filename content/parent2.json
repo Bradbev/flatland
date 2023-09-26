@@ -1,0 +1,7 @@
+{
+  "Type": "main.EditTest",
+  "Parent": "",
+  "Inner": {
+    "String": "Parent 2"
+  }
+}

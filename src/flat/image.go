@@ -85,27 +85,3 @@ func (c *ImageComponent) Draw(screen *ebiten.Image) {
 		screen.DrawImage(c.Image.GetImage(), &op)
 	}
 }
-
-func ApplyTransform(transform *Transform, geom *ebiten.GeoM) {
-	geom.Scale(transform.ScaleX, transform.ScaleY)
-	geom.Rotate(DegToRad(transform.Rotation))
-	geom.Translate(transform.Location.X, transform.Location.Y)
-}
-
-// Apply all the transforms up the owning chain so that nested components
-// can have relative transforms
-func ApplyComponentTransforms(tr Transformer, geom *ebiten.GeoM) {
-	ApplyTransform(tr.GetTransform(), geom)
-	if comp, ok := tr.(Component); ok {
-		if owningTransformer, ok := comp.Owner().(Transformer); ok {
-			ApplyComponentTransforms(owningTransformer, geom)
-		}
-	}
-}
-
-func WalkUpComponentOwners(start Component, callback func(comp Component)) {
-	for start != nil {
-		callback(start)
-		start = start.Owner()
-	}
-}

@@ -3,7 +3,7 @@ module github.com/bradbev/flatland
 go 1.20
 
 require (
-	github.com/hajimehoshi/ebiten/v2 v2.5.7
+	github.com/hajimehoshi/ebiten/v2 v2.5.9
 	github.com/inkyblackness/imgui-go/v4 v4.7.0
 	github.com/stretchr/testify v1.8.4
 )

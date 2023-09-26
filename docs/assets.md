@@ -51,24 +51,23 @@ type HasReference struct {
 	Other *OtherAsset
 }
 ```
-In this case, `OtherAsset` is a registered asset, that is saved on disk as
+In this case, `OtherAsset` is a registered asset that is saved on disk as
 "otherasset.json".  Normally the `json` serialization would save the values of
 `Other` directly inline, but `asset` serialization is different.  Instead, a
 private structure is saved into the json file that contains a reference to the
 path "otherasset.json".  At load time `asset.Load("otherasset.json")` will be
-called to provide the pointer for Other.  
+called to provide the pointer for `Other`.  
 > ### TODO
 > * What is true for pointers is true for interfaces.
 > * A pointer to a known asset type that is not saved on disk will be serialized inline
 
 ## Rule 4 - Assets are singletons
-Assets should be loaded with the `asset.Load(path)` function.  This function will load
-an asset from disk, or return a pointer to the already loaded asset.  This is a
-very useful property to allow live-tuning of assets.  Code should take care when
-changing the values inside an asset at runtime.
-> ### TODO
-> I need to provide a 'parenting' mechanism for assets so that most values can
-> be inherited from another asset. 
+Assets should be loaded with the `asset.Load(path)` function.  This function 
+will load an asset from disk, or return a pointer to the already loaded asset.  
+This is a very useful property to allow live-tuning of assets.  Code should 
+take care when changing the values inside an asset at runtime.
+
+## Rule 5 - `inline` values are new instances
 
 
 # Parent Values for Assets

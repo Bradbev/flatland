@@ -14,6 +14,7 @@ information hiding/abstraction against reflection?
 - some sort of global context for the "world", otherwise objects won't be able to interact with each other.
 
 # Next Goal
+- BUG: "Revert" in the asset editor doesn't reuse Components 
 - Fruitroids game flow - start screen, lives, score, restart
 - Custom world editor
 - Custom debugger for PIE play
@@ -50,3 +51,12 @@ window opens and is disposed of when the window closes.
 
 # Components vs Actors
 If you only have the Owner node, you also then need all the leaves to generate the tree.  If each node has children, saving the tree is trivial.
+
+
+# World Editing
+- `flat.World` is typically the top level container for flat games.
+- every actor in the world is saved inline
+- inline saved actors usually have parents, but it is not required
+- the world creates new instances of every actor at BeginPlay
+- world ed needs to track the new instances and provide edit controls for them
+

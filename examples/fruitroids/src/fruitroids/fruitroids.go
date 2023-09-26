@@ -12,7 +12,22 @@ import (
 
 type Fruitroids struct {
 	w, h  int
+	Flow  *GameFlow
 	World *flat.World
+}
+
+type WorldType int
+
+const (
+	WorldType_Pre WorldType = iota
+	WorldType_Main
+	WorldType_Post
+)
+
+type GameFlow struct {
+	Worlds []*flat.World
+
+	activeWorld *flat.World
 }
 
 var ActiveWorld *Fruitroids
@@ -47,4 +62,5 @@ func RegisterFruitroidTypes() {
 	asset.RegisterAsset(CircleCollisionComponent{})
 	asset.RegisterAsset(PhysicsCollisionManager{})
 	asset.RegisterAsset(Bullet{})
+	asset.RegisterAsset(GameFlow{})
 }

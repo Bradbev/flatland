@@ -81,6 +81,13 @@ func RegisterWritableFileSystem(filesystem WriteableFileSystem) error {
 	return nil
 }
 
+// SetEditorMode informs the asset package that it is being used in an
+// editor context.  For example when enabled extra meta data about
+// which fields a child asset overrides must be saved.
+func SetEditorMode() {
+	assetManager.EditorMode = true
+}
+
 func RegisterAssetFactory(zeroAsset any, factoryFunction FactoryFunc) {
 	assetManager.RegisterAssetFactory(zeroAsset, factoryFunction)
 }
@@ -124,11 +131,20 @@ func Save(path Path, toSave Asset) error {
 	return assetManager.Save(path, toSave)
 }
 
+// SetParent is used to set the parent of an Asset.
+// When an Asset is reparented, all values that are not overridden by the child
+// are copied in from the parent.  If there is no previous parent then the parent
+// and the child are diffed and in places where they differ the child will override
+// the parent.
 func SetParent(child Asset, parent Asset) error {
 	return assetManager.SetParent(child, parent)
 }
 
-func LoadPathForAsset(a Asset) (Path, error) {
+func GetParent(child Asset) Path {
+	return assetManager.GetParent(child)
+}
+
+func GetLoadPathForAsset(a Asset) (Path, error) {
 	path, ok := assetManager.AssetToLoadPath[a]
 	if !ok {
 		return path, fmt.Errorf("Asset not loaded")
@@ -160,12 +176,18 @@ func FilterAssetDescriptorsByReflectType(typ reflect.Type) []*AssetDescriptor {
 	return assetManager.FilterAssetDescriptorsByType(typ)
 }
 
-func Reset() {
+func ResetForTest() {
 	assetManager = newAssetManagerImpl()
+	assetManager.EditorMode = true
 }
 
 func GetAssetDescriptors() []*AssetDescriptor {
 	return assetManager.AssetDescriptorList
+}
+
+func GetDescriptorForAsset(asset Asset) *AssetDescriptor {
+	_, typeName := ObjectTypeName(asset)
+	return assetManager.AssetDescriptors[typeName]
 }
 
 func ObjectTypeName(obj any) (name string, fullname string) {

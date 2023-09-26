@@ -10,6 +10,7 @@ type TreeNode interface {
 }
 
 // TreeNodeSelected is an extended interface from the basic TreeNode interface
+// Nodes must implement this interface if they wish to be selectable
 type TreeNodeSelected interface {
 	Selected() bool
 }
@@ -27,6 +28,8 @@ const (
 	DroppedAfterNode
 )
 
+// TreeNodeDragDropHandler is an extended interface that can be used by clients
+// that wish to respond to drag/drop events
 type TreeNodeDragDropHandler interface {
 	// Context must be stored by the client
 	Context() *TreeDragContext

@@ -34,7 +34,8 @@ func Text(format string, args ...any) {
 func InputText(label string, text *string) bool {
 	imgui.Text(label)
 	imgui.SameLine()
-	return imgui.InputText("", text)
+
+	return imgui.InputText("##"+label, text)
 }
 
 func TreeNodeWithPop(label string, flags imgui.TreeNodeFlags, body func()) {

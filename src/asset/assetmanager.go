@@ -7,19 +7,18 @@ import (
 	"reflect"
 	"strings"
 
-	"github.com/jinzhu/copier"
 	"golang.org/x/exp/slices"
 )
 
-// loadedAssetContainer must be the same as savedAssetContainer, except for the type of Inner
-type loadedAssetContainer struct {
+// onDiskLoadFormat must be the same as onDiskSaveFormat, except for the type of Inner
+type onDiskLoadFormat struct {
 	Type   string
 	Parent Path
 	Inner  json.RawMessage
 }
 
-// savedAssetContainer must be the same as loadedAssetContainer, except for the type of Inner
-type savedAssetContainer struct {
+// onDiskSaveFormat must be the same as onDiskLoadFormat, except for the type of Inner
+type onDiskSaveFormat struct {
 	Type   string
 	Parent Path
 	Inner  interface{}
@@ -41,6 +40,13 @@ type assetManagerImpl struct {
 
 	// ChildToParent maps a child asset to its parent
 	ChildToParent map[Asset]Path
+
+	EditorMode bool
+
+	// ChildAssetOverrides stores metadata about a child asset and
+	// the feilds that it overrides.  If an asset is not a child
+	// it will not be in this map.
+	ChildAssetOverrides map[Asset]*childOverrides
 }
 
 type fsWrapper struct {
@@ -52,11 +58,12 @@ var assetManager = newAssetManagerImpl()
 
 func newAssetManagerImpl() *assetManagerImpl {
 	return &assetManagerImpl{
-		FileSystems:      []*fsWrapper{},
-		AssetDescriptors: map[string]*AssetDescriptor{},
-		AssetToLoadPath:  map[Asset]Path{},
-		LoadPathToAsset:  map[Path]Asset{},
-		ChildToParent:    map[Asset]Path{},
+		FileSystems:         []*fsWrapper{},
+		AssetDescriptors:    map[string]*AssetDescriptor{},
+		AssetToLoadPath:     map[Asset]Path{},
+		LoadPathToAsset:     map[Path]Asset{},
+		ChildToParent:       map[Asset]Path{},
+		ChildAssetOverrides: map[Asset]*childOverrides{},
 	}
 }
 
@@ -115,7 +122,7 @@ func (a *assetManagerImpl) FilterFilesByType(typ reflect.Type) ([]string, error)
 		if err != nil {
 			return err
 		}
-		container := loadedAssetContainer{}
+		container := onDiskLoadFormat{}
 		err = json.Unmarshal(data, &container)
 		if err != nil {
 			return nil
@@ -190,36 +197,83 @@ func (a *assetManagerImpl) RegisterAssetFactory(zeroAsset any, factoryFunction F
 	})
 }
 
-// SetParent is used to set the parent of an Asset and also update
-// the child with new parent defaults.
+func (a *assetManagerImpl) GetAssetDescriptor(target Asset) *AssetDescriptor {
+	_, typeName := ObjectTypeName(target)
+	return a.AssetDescriptors[typeName]
+}
+
 func (a *assetManagerImpl) SetParent(child Asset, parent Asset) error {
+	if !a.EditorMode {
+		panic("Must be in editor mode to call SetParent")
+	}
+
+	if parent == nil {
+		delete(a.ChildToParent, child)
+		delete(a.ChildAssetOverrides, child)
+		return nil
+	}
+
 	parentPath, ok := a.AssetToLoadPath[parent]
 	if !ok {
 		return fmt.Errorf("parent is not a loaded asset %v", parent)
 	}
-	// To set a new parent we need to find the diffs between the old parent and the child
-	var oldParent any
-	if oldParentPath, ok := a.ChildToParent[child]; ok {
-		var err error
-		oldParent, err = a.Load(oldParentPath)
-		if err != nil {
-			return err
+
+	_, hadParent := a.ChildToParent[child]
+	if !hadParent {
+		// no parent case
+		diffs := a.findDiffsFromParent(parent, child)
+		if diffs != nil {
+			overrides := newChildOverrides()
+			overrides.BuildFromCommonFormat(diffs)
+			a.ChildAssetOverrides[child] = overrides
 		}
 	}
 
 	a.ChildToParent[child] = parentPath
-
-	// find diffs between the old parent and the child
-	diffs := a.findDiffsFromParent(oldParent, child)
-
-	// copy the new parent values into the child
-	copier.CopyWithOption(child, parent, copier.Option{DeepCopy: true})
-	b, err := json.Marshal(diffs)
-	if err != nil {
-		return err
+	if hadParent {
+		a.refreshParentValuesForChild(child, parentPath)
 	}
-	// unmarshal the diffs into the child
-	json.Unmarshal(b, child)
 
-	return err
+	return nil
+}
+
+func (a *assetManagerImpl) GetParent(child Asset) Path {
+	return a.ChildToParent[child]
+}
+
+type OverrideEnableType uint8
+
+const (
+	OverrideEnable OverrideEnableType = iota
+	OverrideDisable
+)
+
+func SetChildOverrideForField(child Asset, pathToField string, enable OverrideEnableType) error {
+	return assetManager.SetChildOverrideForField(child, pathToField, enable)
+}
+
+func ChildOverridesField(child Asset, pathToField string) bool {
+	overrides := assetManager.ChildAssetOverrides[child]
+	if overrides == nil {
+		return false
+	}
+	return overrides.PathHasOverride(pathToField)
+}
+
+func (a *assetManagerImpl) SetChildOverrideForField(child Asset, pathToField string, enable OverrideEnableType) error {
+	overrides := a.ChildAssetOverrides[child]
+	if enable == OverrideEnable {
+		if overrides == nil {
+			overrides = newChildOverrides()
+			a.ChildAssetOverrides[child] = overrides
+		}
+		overrides.AddPath(pathToField)
+	}
+	if enable == OverrideDisable && overrides != nil {
+		overrides.RemovePath(pathToField)
+		if parentPath, ok := a.ChildToParent[child]; ok {
+			a.refreshParentValuesForChild(child, parentPath)
+		}
+	}
+	return nil
 }

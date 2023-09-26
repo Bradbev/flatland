@@ -11,19 +11,31 @@ import (
 )
 
 type assetEditWindow struct {
-	target  asset.Asset
-	path    string
-	context *TypeEditContext
+	target      asset.Asset
+	path        string
+	context     *TypeEditContext
+	selectModal edgui.SelectAssetModal
+}
+
+func callEditorBeginPlay(a any) {
+	if editorPlayable, ok := a.(flat.EditorPlayable); ok {
+		editorPlayable.EditorBeginPlay()
+	} else if playable, ok := a.(flat.Playable); ok {
+		playable.BeginPlay()
+	}
 }
 
 func newAssetEditWindow(path string, target asset.Asset, context *TypeEditContext) *assetEditWindow {
-	if playable, ok := target.(flat.Playable); ok {
-		playable.BeginPlay()
-	}
+	// TODO - this needs a different lifecycle hook
+	callEditorBeginPlay(target)
 	return &assetEditWindow{
 		path:    path,
 		target:  target,
 		context: context,
+		selectModal: edgui.SelectAssetModal{
+			Title: "Select Parent",
+			Type:  reflect.TypeOf(target),
+		},
 	}
 }
 
@@ -34,7 +46,6 @@ func (a *assetEditWindow) Draw() error {
 		enabled := a.context.hasChanged
 		reload := false
 		edgui.WithDisabled(!enabled, func() {
-			imgui.SameLineV(0, imgui.WindowWidth()-180)
 			if imgui.Button("Save") && enabled {
 				asset.Save(asset.Path(a.path), a.target)
 				a.context.hasChanged = false
@@ -43,9 +54,7 @@ func (a *assetEditWindow) Draw() error {
 			imgui.SameLine()
 			if imgui.Button("Revert") {
 				asset.LoadWithOptions(asset.Path(a.path), asset.LoadOptions{ForceReload: true})
-				if playable, ok := a.target.(flat.Playable); ok {
-					playable.BeginPlay()
-				}
+				callEditorBeginPlay(a.target)
 			}
 		})
 		imgui.SameLine()
@@ -60,10 +69,35 @@ func (a *assetEditWindow) Draw() error {
 					}
 				})
 			}
-			if playable, ok := a.target.(flat.Playable); ok {
-				playable.BeginPlay()
+			callEditorBeginPlay(a.target)
+		}
+		imgui.SameLine()
+		if imgui.Button("Set Parent") {
+			a.selectModal.Open()
+		}
+		if a.selectModal.DrawWithExtraHeaderUI(func() {
+			imgui.SameLine()
+			if imgui.Button("Set No Parent") {
+				asset.SetParent(a.target, nil)
+				imgui.CloseCurrentPopup()
+			}
+		}) {
+			newParentPath := a.selectModal.SelectedPath()
+			currentParentPath := asset.GetParent(a.target)
+			if a.path != newParentPath && newParentPath != string(currentParentPath) {
+				newParent, err := asset.Load(asset.Path(newParentPath))
+				flat.Check(err)
+				asset.SetParent(a.target, newParent)
+				a.context.SetChanged()
 			}
 		}
+
+		if parent := string(asset.GetParent(a.target)); parent != "" {
+			imgui.SameLine()
+			imgui.Text("Parent: " + parent)
+		}
+		imgui.Separator()
+
 		value := reflect.ValueOf(a.target)
 		a.context.EditValue(value)
 	}

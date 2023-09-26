@@ -30,7 +30,7 @@ func TestAssetLoad(t *testing.T) {
 	}
 }`
 	testAssetLoad := func(callback func()) {
-		asset.Reset()
+		asset.ResetForTest()
 		name := asset.Path("asset.json")
 		callback()
 		newTestAsset(name, data)
@@ -85,7 +85,7 @@ func (f *writeFS) WriteFile(path asset.Path, data []byte) error {
 type js = map[string]any
 
 func TestAssetSave(t *testing.T) {
-	asset.Reset()
+	asset.ResetForTest()
 	wfs := newWriteFS()
 	asset.RegisterWritableFileSystem(wfs)
 	asset.RegisterAsset(testAsset{})
@@ -120,13 +120,13 @@ func TestAssetSave(t *testing.T) {
 		assert.Equal(t, expectedObj, loaded)
 	}
 	testLoad(false, "Expected post load to be false because we have only saved the asset and kept hold of the orignal object")
-	asset.Reset()
+	asset.ResetForTest()
 	asset.RegisterAsset(testAsset{})
 	testLoad(true, "Expected post load to be true because we reset the asset package")
 }
 
 func TestAssetList(t *testing.T) {
-	asset.Reset()
+	asset.ResetForTest()
 	asset.RegisterAsset(testAsset{})
 
 	expected := "github.com/bradbev/flatland/src/asset_test.testAsset"
@@ -134,7 +134,7 @@ func TestAssetList(t *testing.T) {
 	assert.Equal(t, expected, assets[0].FullName, "Names don't match")
 }
 func TestAssetCreate(t *testing.T) {
-	asset.Reset()
+	asset.ResetForTest()
 	asset.RegisterAsset(testAsset{})
 
 	allAssets := asset.GetAssetDescriptors()
@@ -170,7 +170,7 @@ Linked Assets
 // is saved such that node.Reference is an object that contains a path
 // to load, ie - not serialized as if it were inline.
 func TestAssetSaveLinked(t *testing.T) {
-	asset.Reset()
+	asset.ResetForTest()
 	rootFS := newWriteFS()
 	asset.RegisterFileSystem(rootFS.fs, 0)
 	asset.RegisterWritableFileSystem(rootFS)
@@ -229,7 +229,7 @@ func TestAssetSaveLinked(t *testing.T) {
 // Finally the general map needs to be loaded into the
 // target structure.
 func TestAssetLoadLinked(t *testing.T) {
-	asset.Reset()
+	asset.ResetForTest()
 	rootFS := newWriteFS()
 	asset.RegisterFileSystem(rootFS.fs, 0)
 	asset.RegisterWritableFileSystem(rootFS)
@@ -286,7 +286,7 @@ type testAssetPath struct {
 func TestAliasedTypes(t *testing.T) {
 	rootFS := newWriteFS()
 	reset := func() {
-		asset.Reset()
+		asset.ResetForTest()
 		asset.RegisterFileSystem(rootFS.fs, 0)
 		asset.RegisterWritableFileSystem(rootFS)
 		asset.RegisterAsset(testAssetPath{})
@@ -335,73 +335,6 @@ func TestReflectCopy(t *testing.T) {
 	assert.NotEqual(t, a, b.Interface())
 }
 
-type testAssetParent struct {
-	StrA string
-	StrB string
-}
-
-func TestParentLoadingSavingSetting(t *testing.T) {
-	rootFS := newWriteFS()
-	reset := func() {
-		asset.Reset()
-		asset.RegisterFileSystem(rootFS.fs, 0)
-		asset.RegisterWritableFileSystem(rootFS)
-		asset.RegisterAsset(testAssetParent{})
-	}
-	reset()
-
-	{ // save to the FS
-		toSave := &testAssetParent{
-			StrA: "ParentA",
-			StrB: "ParentB",
-		}
-		err := asset.Save("parent.json", toSave)
-		assert.NoError(t, err)
-
-		err = asset.Save("child.json", &testAssetParent{})
-		assert.NoError(t, err)
-	}
-
-	{ // load them both
-		loadedParent, err := asset.Load("parent.json")
-		assert.NoError(t, err)
-		parent := loadedParent.(*testAssetParent)
-		assert.Equal(t, &testAssetParent{"ParentA", "ParentB"}, parent)
-
-		loadedChild, err := asset.Load("child.json")
-		assert.NoError(t, err)
-		child := loadedChild.(*testAssetParent)
-		assert.Equal(t, &testAssetParent{}, child)
-
-		parent.StrB = "ParentNewB"
-		child.StrA = "ChildA"
-		err = asset.SetParent(child, parent)
-		assert.NoError(t, err)
-		assert.Equal(t, &testAssetParent{"ChildA", "ParentNewB"}, child, "Setting the parent will immediately fix the child")
-		asset.Save("child.json", child)
-
-		parent.StrB = "ThirdB"
-		loadedAgain, err := asset.LoadWithOptions("child.json", asset.LoadOptions{ForceReload: true})
-		assert.NoError(t, err)
-		assert.Equal(t, loadedChild, loadedAgain, "The already loaded asset is returned")
-		assert.Equal(t, &testAssetParent{"ChildA", "ThirdB"}, child, "The asset is modified in place")
-
-		parent.StrB = "Fourth"
-		asset.Save("parent.json", parent)
-		assert.Equal(t, &testAssetParent{"ChildA", "Fourth"}, child, "Child assets are updated in memory when parents are saved")
-
-	}
-
-	reset()
-	{
-		loadedChild, err := asset.Load("child.json")
-		assert.NoError(t, err)
-		child := loadedChild.(*testAssetParent)
-		assert.Equal(t, &testAssetParent{"ChildA", "Fourth"}, child)
-	}
-
-}
-
 type inlineInnerSaveStruct struct {
 	ItemA string
 	ItemB string
@@ -410,13 +343,14 @@ type inlineInnerSaveStruct struct {
 type inlineSaving struct {
 	WillNotSave         *inlineInnerSaveStruct
 	SaveInline          *inlineInnerSaveStruct `flat:"inline"`
+	SaveInlineNoChanges *inlineInnerSaveStruct `flat:"inline"`
 	SaveInterfaceInline any                    `flat:"inline"`
 }
 
 func TestInlineAssetSaving(t *testing.T) {
 	rootFS := newWriteFS()
 	reset := func() {
-		asset.Reset()
+		asset.ResetForTest()
 		asset.RegisterFileSystem(rootFS.fs, 0)
 		asset.RegisterWritableFileSystem(rootFS)
 		asset.RegisterAsset(inlineInnerSaveStruct{})
@@ -435,9 +369,14 @@ func TestInlineAssetSaving(t *testing.T) {
 	}
 
 	asset.SetParent(toSave.SaveInline, parent)
+	toSave.SaveInlineNoChanges = parent
+	asset.SetParent(toSave.SaveInlineNoChanges, parent)
 
 	err := asset.Save("inlined.json", toSave)
 	assert.NoError(t, err)
+
+	d, _ := asset.ReadFile("inlined.json")
+	fmt.Println(string(d))
 
 	reset()
 
@@ -445,6 +384,7 @@ func TestInlineAssetSaving(t *testing.T) {
 	assert.NoError(t, err)
 	expected := &inlineSaving{
 		SaveInline:          &inlineInnerSaveStruct{"InlineA", "ParentB"},
+		SaveInlineNoChanges: &inlineInnerSaveStruct{"ParentA", "ParentB"},
 		SaveInterfaceInline: &inlineInnerSaveStruct{"IfaceA", "IfaceB"},
 	}
 	assert.Equal(t, expected, loaded)
@@ -460,6 +400,11 @@ func TestInlineAssetSaving(t *testing.T) {
         "ItemA": "InlineA"
       }
     },
+    "SaveInlineNoChanges": {
+      "Type": "github.com/bradbev/flatland/src/asset_test.inlineInnerSaveStruct",
+      "Parent": "parent.json",
+      "Inner": null
+    },
     "SaveInterfaceInline": {
       "Type": "github.com/bradbev/flatland/src/asset_test.inlineInnerSaveStruct",
       "Parent": "",
@@ -472,6 +417,16 @@ func TestInlineAssetSaving(t *testing.T) {
 }`
 	data, err := fs.ReadFile(rootFS.fs, "inlined.json")
 	assert.Equal(t, exactFileContent, string(data), "The inlined field has a parent etc")
+}
+
+type postLoadChecker struct {
+	hasPostLoaded bool
+}
+
+func (p *postLoadChecker) PostLoad() { p.hasPostLoaded = true }
+
+type postLoadParent struct {
+	InlineSaved *postLoadChecker `flat:"inline"`
 }
 
 type testFilter struct{}
@@ -487,7 +442,7 @@ type testIFace interface {
 func TestAssetTypeFiltering(t *testing.T) {
 	rootFS := newWriteFS()
 	reset := func() {
-		asset.Reset()
+		asset.ResetForTest()
 		asset.RegisterFileSystem(rootFS.fs, 0)
 		asset.RegisterWritableFileSystem(rootFS)
 		asset.RegisterAsset(testFilter{})
@@ -515,7 +470,7 @@ func TestAssetTypeFiltering(t *testing.T) {
 func TestAssetDescriptorTypeFiltering(t *testing.T) {
 	rootFS := newWriteFS()
 	reset := func() {
-		asset.Reset()
+		asset.ResetForTest()
 		asset.RegisterFileSystem(rootFS.fs, 0)
 		asset.RegisterWritableFileSystem(rootFS)
 		asset.RegisterAsset(testFilter{})
@@ -539,4 +494,51 @@ func TestAssetDescriptorTypeFiltering(t *testing.T) {
 
 	desc = asset.FilterAssetDescriptorsByType[any]()
 	assert.Equal(t, allDescriptors, desc, "Exact type of the object matches")
+}
+
+type newInstanceTest struct {
+	SavedValue    int
+	postloaded    bool
+	internalValue int
+}
+
+func (n *newInstanceTest) PostLoad() {
+	n.postloaded = true
+}
+
+func (n *newInstanceTest) DefaultInitialize() {
+	n.internalValue = 111
+}
+
+func TestAssetNewInstance(t *testing.T) {
+	rootFS := newWriteFS()
+	reset := func() {
+		asset.ResetForTest()
+		asset.RegisterFileSystem(rootFS.fs, 0)
+		asset.RegisterWritableFileSystem(rootFS)
+		asset.RegisterAsset(newInstanceTest{})
+	}
+	reset()
+
+	desc := asset.FilterAssetDescriptorsByType[newInstanceTest]()
+	instA, err := desc[0].Create()
+	inst := instA.(*newInstanceTest)
+	assert.NoError(t, err)
+	assert.Equal(t, 111, inst.internalValue, "Default initialize must have been called")
+	assert.False(t, inst.postloaded, "Creating a new instance does not call PostLoad")
+	inst.SavedValue = 123
+	asset.Save("inst.json", inst)
+
+	reset()
+	instA, err = asset.Load("inst.json")
+	inst = instA.(*newInstanceTest)
+	assert.Equal(t, 111, inst.internalValue, "Default initialize must have been called")
+	assert.True(t, inst.postloaded, "PostLoad is called when Load is used")
+
+	newInst, err := asset.NewInstance(inst)
+	instB := newInst.(*newInstanceTest)
+	assert.Equal(t, 123, instB.SavedValue, "Exported values are copied")
+	assert.Equal(t, 111, instB.internalValue, "Default initialize must have been called")
+	assert.True(t, instB.postloaded, "PostLoad is called when Load is used")
+
 }

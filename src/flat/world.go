@@ -9,7 +9,7 @@ import (
 type World struct {
 	updateables      []Updateable
 	drawables        []Drawable
-	PersistentActors []Actor
+	PersistentActors []Actor `flat:"inline"`
 }
 
 func NewWorld() *World {
@@ -27,13 +27,25 @@ func (w *World) PostLoad() {
 }
 
 func (w *World) BeginPlay() {
+	w.beginPlay(false)
+}
+
+func (w *World) EditorBeginPlay() {
+	w.beginPlay(true)
+}
+
+func (w *World) beginPlay(isEditor bool) {
 	w.reset()
 	for _, actor := range w.PersistentActors {
 		if actor == nil {
 			continue
 		}
-		instance, _ := asset.NewInstance(actor)
-		w.AddToWorld(instance.(Actor))
+		if isEditor {
+			w.AddToWorld(actor)
+		} else {
+			instance, _ := asset.NewInstance(actor)
+			w.AddToWorld(instance.(Actor))
+		}
 	}
 }
 

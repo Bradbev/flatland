@@ -146,7 +146,7 @@ func (c *contentWindow) drawAddAssetModal() {
 		}
 
 		imgui.Separator()
-		func() { // asset box
+		func() { // asset box, in a func to defer the disabled style
 			if invalidName {
 				imgui.PushStyleColor(imgui.StyleColorText, imgui.Vec4{0.5, 0.5, 0.5, 0.5})
 				defer imgui.PopStyleColor()

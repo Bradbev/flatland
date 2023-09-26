@@ -47,17 +47,17 @@ func main() {
 	})
 
 	// load an asset to be edited by the test editor
-	/*
-		asset.Save("testedit.json", &defaultTestObject)
-		gg.ed.EditAsset("testedit.json")
+	//asset.Save("testedit.json", &defaultTestObject)
+	//gg.ed.EditAsset("testedit.json")
 
-			asset.Save("childedit.json", &defaultTestObjectChild)
-			asset.SetParent(&defaultTestObjectChild, &defaultTestObject)
-			gg.ed.EditAsset("childedit.json")
+	defaultTestObjectChild = defaultTestObject
+	asset.SetParent(&defaultTestObjectChild, &defaultTestObject)
+	//asset.Save("childedit.json", &defaultTestObjectChild)
+	gg.ed.EditAsset("childedit.json")
 
-			gg.ed.EditAsset("actorTest.json")
-	*/
-	gg.ed.EditAsset("font.json")
+	//gg.ed.EditAsset("actorTest.json")
+	//gg.ed.EditAsset("font.json")
+	//gg.ed.EditAsset("world.json")
 
 	menu := edgui.Menu{
 		Name: "Custom Item",
@@ -94,6 +94,7 @@ type actorTest struct {
 func (a *actorTest) BeginPlay() {
 	a.ActorBase.BeginPlay(a)
 }
+
 func (a *actorTest) TestTab() {}
 
 type testInterfaceEditor interface {
@@ -111,18 +112,19 @@ const (
 // EditTest demonstrates all the ways that the editor can
 // edit types.
 type EditTest struct {
-	TestEnum    TestEnum
-	AssetType   asset.Asset // support setting Assets
-	Flt         float32
-	Slice       []int
-	Array       [3]float32
-	StringSlice []string
-	StructSlice []nestedIndirect
-	Flt64       float64
-	Bool        bool
-	String      string
-	Int         int
-	hidden      float32
+	TestEnum        TestEnum
+	AssetType       asset.Asset // support setting Assets
+	RestrictedTypes *EditTest
+	Flt             float32
+	Slice           []int
+	Array           [3]float32
+	StringSlice     []string
+	StructSlice     []nestedIndirect
+	Flt64           float64
+	Bool            bool
+	String          string
+	Int             int
+	hidden          float32
 
 	// Path is filtered using the tag "filter" to files containing the text "json"
 	Path asset.Path `flat:"desc:Path (json filter) ; filter:json" filter:"json"`
@@ -138,7 +140,8 @@ type EditTest struct {
 }
 
 var defaultTestObject = EditTest{
-	Slice: []int{7, 6},
+	Slice:  []int{7, 6},
+	String: "Default Test Object",
 }
 var defaultTestObjectChild = EditTest{}
 
@@ -151,6 +154,7 @@ type G struct {
 	dscale         float64
 	w, h           int
 	showTestTree   bool
+	showTestList   bool
 
 	ed *editor.ImguiEditor
 }
@@ -158,6 +162,7 @@ type G struct {
 func (g *G) showTestControls() {
 	if imgui.Begin("Test Controls") {
 		imgui.Checkbox("ShowTestTree", &g.showTestTree)
+		imgui.Checkbox("ShowTestList", &g.showTestList)
 		imgui.Checkbox("ShowDemoWindow", &g.showDemoWindow)
 	}
 	imgui.End()
@@ -185,6 +190,10 @@ func (g *G) Update() error {
 
 		if g.showTestTree {
 			edtest.TreeTest()
+		}
+
+		if g.showTestList {
+			edtest.ListTest()
 		}
 	}
 	g.mgr.EndFrame()

@@ -1,6 +1,10 @@
 package edgui
 
-import "github.com/inkyblackness/imgui-go/v4"
+import (
+	"strings"
+
+	"github.com/inkyblackness/imgui-go/v4"
+)
 
 type TreeNode interface {
 	Name() string
@@ -87,6 +91,7 @@ func drawTree(root TreeNode, handler TreeNodeActionHandler, context *treeContext
 			treeClicked(root, handler)
 			treeDragged(root, handler, context)
 		}
+
 		for _, child := range root.Children() {
 			drawTree(child, handler, context)
 		}
@@ -123,7 +128,8 @@ func treeDragged(node TreeNode, handler TreeNodeActionHandler, context *treeCont
 
 			dragger.Context().dragStartNode = node
 			dragger.DragSource(node)
-			imgui.Text(node.Name())
+			nameParts := strings.Split(node.Name(), "##")
+			imgui.Text(nameParts[0])
 			imgui.EndDragDropSource()
 		}
 		if imgui.BeginDragDropTarget() {

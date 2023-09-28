@@ -53,9 +53,9 @@ func main() {
 	defaultTestObjectChild = defaultTestObject
 	asset.SetParent(&defaultTestObjectChild, &defaultTestObject)
 	//asset.Save("childedit.json", &defaultTestObjectChild)
-	gg.ed.EditAsset("childedit.json")
+	//gg.ed.EditAsset("childedit.json")
 
-	//gg.ed.EditAsset("actorTest.json")
+	gg.ed.EditAsset("actorTest.json")
 	//gg.ed.EditAsset("font.json")
 	//gg.ed.EditAsset("world.json")
 

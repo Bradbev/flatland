@@ -148,6 +148,9 @@ func WalkComponents(c Component, callback func(target, parent Component)) {
 }
 
 func walkComponents(target, parent Component, callback func(target, parent Component)) {
+	if target == nil {
+		return
+	}
 	callback(target, parent)
 	for _, child := range target.GetComponents() {
 		walkComponents(child, target, callback)

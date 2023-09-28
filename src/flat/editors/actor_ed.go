@@ -16,19 +16,17 @@ import (
 )
 
 type actorEdContext struct {
-	componentTreeRoot *componentTreeNode
-	handler           componentTreeNodeHandler
-	addDialog         *AddComponentDialog
-	valueToEdit       reflect.Value
+	componentTreeHandler componentTreeNodeHandler
+	addDialog            *AddComponentDialog
+	valueToEdit          reflect.Value
 }
 
 func actorEd(context *editor.TypeEditContext, value reflect.Value) error {
 	actor := value.Addr().Interface().(flat.Actor)
 	c, firstTime := editor.GetContext[actorEdContext](context, value)
 	if firstTime {
-		c.componentTreeRoot = buildComponentTree(actor)
-		c.handler = componentTreeNodeHandler{
-			root:    c.componentTreeRoot,
+		c.componentTreeHandler = componentTreeNodeHandler{
+			root:    buildComponentTree(actor),
 			context: c,
 			actor:   actor,
 		}
@@ -86,12 +84,12 @@ func componentTree(actor flat.Actor, actorEd *actorEdContext, context *editor.Ty
 	}
 	imgui.SameLine()
 	if imgui.Button("Remove") {
-		edgui.WalkTree(actorEd.componentTreeRoot, nil, func(node edgui.TreeNode, context any) {
+		edgui.WalkTree(actorEd.componentTreeHandler.root, nil, func(node edgui.TreeNode, context any) {
 			if node.(*componentTreeNode).selected {
-				removeNode(actorEd.componentTreeRoot, node)
+				removeNode(actorEd.componentTreeHandler.root, node)
 			}
 		})
-		copyTree(actorEd.handler.actor, actorEd.componentTreeRoot)
+		copyTree(actorEd.componentTreeHandler.actor, actorEd.componentTreeHandler.root)
 		context.SetChanged()
 	}
 	if actorEd.addDialog.Draw() {
@@ -99,12 +97,12 @@ func componentTree(actor flat.Actor, actorEd *actorEdContext, context *editor.Ty
 		if desc != nil {
 			comp, _ := desc.Create()
 			actor.SetComponents(append(actor.GetComponents(), comp.(flat.Component)))
-			actorEd.componentTreeRoot = buildComponentTree(actor)
+			actorEd.componentTreeHandler.root = buildComponentTree(actor)
 			actorEd.valueToEdit = reflect.ValueOf(comp.(flat.Component)).Elem()
 			context.SetChanged()
 		}
 	}
-	edgui.DrawTree(actorEd.componentTreeRoot, &actorEd.handler)
+	edgui.DrawTree(actorEd.componentTreeHandler.root, &actorEd.componentTreeHandler)
 	return nil
 }
 
@@ -118,12 +116,7 @@ type componentTreeNode struct {
 var _ edgui.TreeNode = (*componentTreeNode)(nil)
 
 func (c *componentTreeNode) Name() string {
-	name, _ := asset.ObjectTypeName(c.component)
-	if s, ok := c.component.(fmt.Stringer); ok {
-		name = s.String()
-	}
-	name = fmt.Sprintf("%s##%x", name, c.component)
-	return name
+	return c.name
 }
 func (c *componentTreeNode) Children() []edgui.TreeNode { return c.children }
 func (c *componentTreeNode) Leaf() bool                 { return len(c.children) == 0 }
@@ -143,7 +136,7 @@ func (t *componentTreeNodeHandler) Clicked(node edgui.TreeNode) {
 	edgui.WalkTree(t.root, nil, func(node edgui.TreeNode, context any) {
 		node.(*componentTreeNode).selected = false
 	})
-	n.selected = !n.selected
+	n.selected = true
 	t.context.valueToEdit = reflect.ValueOf(n.component).Elem()
 }
 
@@ -238,7 +231,8 @@ func buildComponentTree(actor flat.Actor) *componentTreeNode {
 			if s, ok := target.(fmt.Stringer); ok {
 				name = s.String()
 			}
-			name = fmt.Sprintf("%s_%x", name, target)
+			name = fmt.Sprintf("%s##%x", name, target)
+
 			node := &componentTreeNode{
 				name:      name,
 				component: target,

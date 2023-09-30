@@ -5,83 +5,101 @@
     "PersistentActors": [
       {
         "Type": "github.com/bradbev/flatland/src/flat.EmptyActor",
-        "Parent": "textdefault.json",
+        "Parent": "screenTextActor.json",
         "Inner": {
           "ActorBase": {
             "Components": [
               {
-                "Type": "github.com/bradbev/flatland/src/flat.TextComponent",
+                "Type": "github.com/bradbev/flatland/src/flat.ScreenPositionComponent",
                 "Parent": "",
                 "Inner": {
-                  "Color": {
-                    "A": 255,
-                    "B": 255,
-                    "G": 255,
-                    "R": 255
-                  },
+                  "Anchor": 4,
                   "ComponentBase": {
+                    "Children": [
+                      {
+                        "Type": "github.com/bradbev/flatland/src/flat.TextComponent",
+                        "Parent": "",
+                        "Inner": {
+                          "Color": {
+                            "G": 255
+                          },
+                          "ComponentBase": {
+                            "Transform": {
+                              "ScaleX": 1,
+                              "ScaleY": 1
+                            }
+                          },
+                          "Font": {
+                            "Type": "github.com/bradbev/flatland/src/flat.Font",
+                            "Path": "defaultFont.json"
+                          },
+                          "TextTemplate": "FRUITROIDS"
+                        }
+                      }
+                    ],
                     "Transform": {
                       "Location": {
-                        "X": -106,
-                        "Y": 20
+                        "X": 260.5,
+                        "Y": 166.72000122070312
                       },
                       "ScaleX": 1,
                       "ScaleY": 1
                     }
                   },
-                  "Font": {
-                    "Type": "github.com/bradbev/flatland/src/flat.Font",
-                    "Path": "defaultFont.json"
-                  },
-                  "TextTemplate": "FRUITROIDS"
+                  "YPercentAwayFromAnchor": -18
                 }
               }
-            ],
-            "Transform": {
-              "Location": {
-                "X": 208,
-                "Y": 84
-              }
-            }
+            ]
           }
         }
       },
       {
         "Type": "github.com/bradbev/flatland/src/flat.EmptyActor",
-        "Parent": "textdefault.json",
+        "Parent": "screenTextActor.json",
         "Inner": {
           "ActorBase": {
             "Components": [
               {
-                "Type": "github.com/bradbev/flatland/src/flat.TextComponent",
+                "Type": "github.com/bradbev/flatland/src/flat.ScreenPositionComponent",
                 "Parent": "",
                 "Inner": {
-                  "Color": {
-                    "A": 255,
-                    "B": 255,
-                    "G": 255,
-                    "R": 255
-                  },
+                  "Anchor": 4,
                   "ComponentBase": {
+                    "Children": [
+                      {
+                        "Type": "github.com/bradbev/flatland/src/flat.TextComponent",
+                        "Parent": "",
+                        "Inner": {
+                          "Color": {
+                            "G": 255
+                          },
+                          "ComponentBase": {
+                            "Transform": {
+                              "ScaleX": 1,
+                              "ScaleY": 1
+                            }
+                          },
+                          "Font": {
+                            "Type": "github.com/bradbev/flatland/src/flat.Font",
+                            "Path": "defaultFont.json"
+                          },
+                          "TextTemplate": "Press space to start"
+                        }
+                      }
+                    ],
                     "Transform": {
+                      "Location": {
+                        "X": 67.72999572753906,
+                        "Y": 260.5
+                      },
                       "ScaleX": 1,
                       "ScaleY": 1
                     }
                   },
-                  "Font": {
-                    "Type": "github.com/bradbev/flatland/src/flat.Font",
-                    "Path": "defaultFont.json"
-                  },
-                  "TextTemplate": "Press Space to Start"
+                  "XPercentAwayFromAnchor": -37
                 }
               }
-            ],
-            "Transform": {
-              "Location": {
-                "X": 74,
-                "Y": 293
-              }
-            }
+            ]
           }
         }
       }

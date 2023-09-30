@@ -1,8 +1,6 @@
 package flat
 
 import (
-	"reflect"
-
 	"github.com/hajimehoshi/ebiten/v2"
 )
 
@@ -53,7 +51,7 @@ type EditorPlayable interface {
 type ComponentBase struct {
 	Transform Transform
 	owner     Component
-	Children  []Component
+	Children  []Component `flat:"inline"`
 }
 
 var _ Component = (*ComponentBase)(nil)
@@ -157,13 +155,11 @@ func walkComponents(target, parent Component, callback func(target, parent Compo
 	}
 }
 
-func FindComponents[T Component](parent Component) []T {
+func FindComponentsByType[T Component](parent Component) []T {
 	result := []T{}
-	var zeroT T
-	typ := reflect.TypeOf(zeroT)
 	WalkComponents(parent, func(target, _ Component) {
-		if reflect.TypeOf(target) == typ {
-			result = append(result, target.(T))
+		if t, ok := target.(T); ok {
+			result = append(result, t)
 		}
 	})
 	return result

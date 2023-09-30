@@ -1,0 +1,48 @@
+{
+  "Type": "github.com/bradbev/flatland/src/flat.EmptyActor",
+  "Parent": "",
+  "Inner": {
+    "ActorBase": {
+      "Components": [
+        {
+          "Type": "github.com/bradbev/flatland/src/flat.ScreenPositionComponent",
+          "Parent": "",
+          "Inner": {
+            "ComponentBase": {
+              "Children": [
+                {
+                  "Type": "github.com/bradbev/flatland/src/flat.TextComponent",
+                  "Parent": "",
+                  "Inner": {
+                    "Color": {
+                      "B": 255
+                    },
+                    "ComponentBase": {
+                      "Transform": {
+                        "ScaleX": 1,
+                        "ScaleY": 1
+                      }
+                    },
+                    "Font": {
+                      "Type": "github.com/bradbev/flatland/src/flat.Font",
+                      "Path": "font.json"
+                    },
+                    "TextTemplate": "fasf"
+                  }
+                }
+              ],
+              "Transform": {
+                "ScaleX": 1,
+                "ScaleY": 1
+              }
+            }
+          }
+        }
+      ],
+      "Transform": {
+        "ScaleX": 1,
+        "ScaleY": 1
+      }
+    }
+  }
+}

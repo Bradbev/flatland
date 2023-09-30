@@ -39,7 +39,7 @@ func (b *Bullet) Draw(screen *ebiten.Image) {
 	pos := b.Transform.Location
 	bounds := screen.Bounds()
 	if pos.X < 0 || pos.Y < 0 || pos.Y > float64(bounds.Max.Y) || pos.X > float64(bounds.Max.X) {
-		ActiveWorld.World.RemoveFromWorld(b)
+		ActiveWorld.RemoveFromWorld(b)
 	}
 
 	b.ActorBase.Draw(screen)

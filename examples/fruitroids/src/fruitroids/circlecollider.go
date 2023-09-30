@@ -50,15 +50,18 @@ func (c *CircleCollisionComponent) CheckOverlap(other *CircleCollisionComponent)
 	dist := vC.Distance(vO)
 
 	if dist < c.Radius+other.Radius {
-		if r, ok := c.Owner().(*Ship); ok {
-			r.velocity = vector3.Vector3{}
-		}
-		if r, ok := other.Owner().(*Roid); ok {
-			if main, ok := c.Owner().(*Bullet); ok {
-				ActiveWorld.World.RemoveFromWorld(r)
+		if roid, ok := other.Owner().(*Roid); ok {
+			if ship, ok := c.Owner().(*Ship); ok {
+				ship.velocity = vector3.Vector3{}
+				getMainGame().NextWorld()
+			}
+
+			if bullet, ok := c.Owner().(*Bullet); ok {
+				getMainGame().IncScore(1)
+				ActiveWorld.RemoveFromWorld(roid)
 				gPhysicsManager.Remove(other)
 
-				ActiveWorld.World.RemoveFromWorld(main)
+				ActiveWorld.RemoveFromWorld(bullet)
 				gPhysicsManager.Remove(c)
 			}
 		}

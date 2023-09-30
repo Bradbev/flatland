@@ -3,6 +3,7 @@ package flat
 import (
 	"fmt"
 	"log"
+	"reflect"
 	"runtime/debug"
 
 	"github.com/hajimehoshi/ebiten/v2"
@@ -62,4 +63,8 @@ func WalkUpComponentOwners(start Component, callback func(comp Component)) {
 		callback(start)
 		start = start.Owner()
 	}
+}
+
+func TypeOf[T any]() reflect.Type {
+	return reflect.TypeOf((*T)(nil)).Elem()
 }

@@ -24,16 +24,25 @@ type TextComponent struct {
 }
 
 func (t *TextComponent) updateCachedValues() {
-	tmpl, err := template.New(t.Name).Parse(t.TextTemplate)
-	Check(err)
+	if t.lastTextTemplate == t.TextTemplate {
+		return
+	}
 	t.lastEval.Reset()
+	tmpl, err := template.New(t.Name).Parse(t.TextTemplate)
+	if err != nil {
+		// malformed templates return errors, which we will display instead of the real text
+		t.lastEval.WriteString("Error:" + err.Error())
+		return
+	}
 	t.tmpl = tmpl
 	t.tmpl.Execute(&t.lastEval, nil)
 	t.op = ebiten.DrawImageOptions{}
 	t.op.ColorScale.ScaleWithColor(t.Color)
+	t.lastTextTemplate = t.TextTemplate
 }
 
-func (t *TextComponent) FillTemplate(data any) {
+func (t *TextComponent) SetValues(data any) {
+	t.updateCachedValues()
 	t.lastEval.Reset()
 	t.tmpl.Execute(&t.lastEval, data)
 }
@@ -42,9 +51,7 @@ func (t *TextComponent) Draw(screen *ebiten.Image) {
 	if t.Font == nil {
 		return
 	}
-	if t.lastTextTemplate != t.TextTemplate {
-		t.updateCachedValues()
-	}
+	t.updateCachedValues()
 
 	t.op.GeoM = ebiten.GeoM{}
 	if t.IgnoreParentRotations {

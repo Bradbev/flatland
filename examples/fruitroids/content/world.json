@@ -5,15 +5,156 @@
     "PersistentActors": [
       {
         "Type": "github.com/bradbev/flatland/examples/fruitroids/src/fruitroids.PhysicsCollisionManager",
-        "Path": "physicsManager.json"
+        "Parent": "",
+        "Inner": {
+          "ActorBase": {
+            "Transform": {
+              "ScaleX": 1,
+              "ScaleY": 1
+            }
+          },
+          "Buckets": [
+            {
+              "Bucket1": "ship",
+              "Bucket2": "roid"
+            },
+            {
+              "Bucket1": "bullet",
+              "Bucket2": "roid"
+            }
+          ]
+        }
       },
       {
         "Type": "github.com/bradbev/flatland/examples/fruitroids/src/fruitroids.LevelSpawn",
-        "Path": "spawner.json"
+        "Parent": "",
+        "Inner": {
+          "ActorBase": {
+            "Transform": {
+              "ScaleX": 1,
+              "ScaleY": 1
+            }
+          },
+          "ToSpawn": [
+            {
+              "CountMax": 4,
+              "CountMin": 1,
+              "RoidType": {
+                "Type": "github.com/bradbev/flatland/examples/fruitroids/src/fruitroids.Roid",
+                "Path": "roidtypes/peach.json"
+              },
+              "RotationMax": 3,
+              "SpeedMax": 21
+            },
+            {
+              "CountMax": 2,
+              "CountMin": 0,
+              "RoidType": {
+                "Type": "github.com/bradbev/flatland/examples/fruitroids/src/fruitroids.Roid",
+                "Path": "roidtypes/pineapple.json"
+              },
+              "RotationMax": 7,
+              "SpeedMax": 11
+            }
+          ]
+        }
+      },
+      {
+        "Type": "github.com/bradbev/flatland/src/flat.EmptyActor",
+        "Parent": "scoreActor.json",
+        "Inner": {
+          "ActorBase": {
+            "Components": [
+              {
+                "Type": "github.com/bradbev/flatland/src/flat.ScreenPositionComponent",
+                "Parent": "",
+                "Inner": {
+                  "ComponentBase": {
+                    "Children": [
+                      {
+                        "Type": "github.com/bradbev/flatland/src/flat.TextComponent",
+                        "Parent": "",
+                        "Inner": {
+                          "Color": {
+                            "G": 255,
+                            "R": 255
+                          },
+                          "ComponentBase": {
+                            "Transform": {
+                              "ScaleX": 1,
+                              "ScaleY": 1
+                            }
+                          },
+                          "Font": {
+                            "Type": "github.com/bradbev/flatland/src/flat.Font",
+                            "Path": "defaultFont.json"
+                          },
+                          "Name": "Score",
+                          "TextTemplate": "Score: {{.}}"
+                        }
+                      }
+                    ],
+                    "Transform": {
+                      "Location": {
+                        "Y": 25
+                      },
+                      "ScaleX": 1,
+                      "ScaleY": 1
+                    }
+                  },
+                  "YPixelsAwayFromAnchor": 25
+                }
+              }
+            ]
+          }
+        }
       },
       {
         "Type": "github.com/bradbev/flatland/examples/fruitroids/src/fruitroids.Ship",
-        "Path": "ship3.json"
+        "Parent": "ship3.json",
+        "Inner": {
+          "ActorBase": {
+            "Components": [
+              {
+                "Type": "github.com/bradbev/flatland/src/flat.ImageComponent",
+                "Parent": "",
+                "Inner": {
+                  "ComponentBase": {
+                    "Transform": {
+                      "ScaleX": 1,
+                      "ScaleY": 1
+                    }
+                  },
+                  "Image": {
+                    "Type": "github.com/bradbev/flatland/src/flat.Image",
+                    "Path": "apple.json"
+                  }
+                }
+              },
+              {
+                "Type": "github.com/bradbev/flatland/examples/fruitroids/src/fruitroids.CircleCollisionComponent",
+                "Parent": "",
+                "Inner": {
+                  "CollisionGroup": "ship",
+                  "ComponentBase": {
+                    "Transform": {
+                      "Location": {
+                        "Y": 9
+                      },
+                      "ScaleX": 1,
+                      "ScaleY": 1
+                    }
+                  },
+                  "Radius": 32
+                }
+              }
+            ]
+          },
+          "BulletType": {
+            "Type": "github.com/bradbev/flatland/examples/fruitroids/src/fruitroids.Bullet",
+            "Path": "bullet.json"
+          }
+        }
       }
     ]
   }

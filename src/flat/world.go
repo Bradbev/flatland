@@ -1,12 +1,15 @@
 package flat
 
 import (
+	"errors"
+
 	"github.com/bradbev/flatland/src/asset"
 	"github.com/hajimehoshi/ebiten/v2"
 	"golang.org/x/exp/slices"
 )
 
 type World struct {
+	actors           []Actor
 	updateables      []Updateable
 	drawables        []Drawable
 	PersistentActors []Actor `flat:"inline"`
@@ -18,9 +21,32 @@ func NewWorld() *World {
 	return w
 }
 
+func FindActorsByType[T Actor](world *World) []T {
+	var result []T
+	for _, a := range world.actors {
+		if t, ok := a.(T); ok {
+			result = append(result, t)
+		}
+	}
+	return result
+}
+
+var StopIterating = errors.New("stop iterating actors")
+
+func ForEachActorByType[T Actor](world *World, callback func(actor T) error) {
+	for _, a := range world.actors {
+		if t, ok := a.(T); ok {
+			if callback(t) == StopIterating {
+				return
+			}
+		}
+	}
+}
+
 func (w *World) reset() {
-	w.updateables = nil
+	w.actors = nil
 	w.drawables = nil
+	w.updateables = nil
 }
 
 func (w *World) PostLoad() {
@@ -49,7 +75,12 @@ func (w *World) beginPlay(isEditor bool) {
 	}
 }
 
+func (w *World) EndPlay() {
+	w.reset()
+}
+
 func (w *World) AddToWorld(actor Actor) {
+	w.actors = append(w.actors, actor)
 	if updateable, ok := actor.(Updateable); ok {
 		w.updateables = append(w.updateables, updateable)
 	}
@@ -62,6 +93,9 @@ func (w *World) AddToWorld(actor Actor) {
 }
 
 func (w *World) RemoveFromWorld(actor Actor) {
+	w.actors = slices.DeleteFunc(w.actors, func(a Actor) bool {
+		return a == actor
+	})
 	if updateable, ok := actor.(Updateable); ok {
 		w.updateables = slices.DeleteFunc(w.updateables, func(u Updateable) bool {
 			return u == updateable

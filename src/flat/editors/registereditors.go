@@ -27,4 +27,16 @@ func RegisterAllFlatEditors(ed *editor.ImguiEditor) {
 		font.HintingVertical: "Vertical",
 		font.HintingFull:     "Full",
 	})
+
+	ed.RegisterEnum(map[any]string{
+		flat.UpperLeft:    "UpperLeft",
+		flat.UpperCenter:  "UpperCenter",
+		flat.UpperRight:   "UpperRight",
+		flat.CenterLeft:   "CenterLeft",
+		flat.CenterCenter: "CenterCenter",
+		flat.CenterRight:  "CenterRight",
+		flat.LowerLeft:    "LowerLeft",
+		flat.LowerCenter:  "LowerCenter",
+		flat.LowerRight:   "LowerRight",
+	})
 }

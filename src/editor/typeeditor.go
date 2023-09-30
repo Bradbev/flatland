@@ -48,6 +48,16 @@ func NewTypeEditContext(ed *ImguiEditor, assetPath string, target asset.Asset) *
 	}
 }
 
+func (e *typeEditor) addPrimitiveTypes() {
+	e.AddType(new(float32), float32Edit)
+	e.AddType(new(float64), float64Edit)
+	e.AddType(new(bool), boolEdit)
+	e.AddType(new(string), stringEdit)
+	e.AddType(new(int), intEdit)
+	e.AddType(new(int32), intEdit)
+	e.AddType(new(asset.Path), pathEd)
+}
+
 // GetContext exists just to help you find editor.GetContext[T](*TypeEditContext, reflect.Value)
 func (c *TypeEditContext) GetContext(key reflect.Value) {
 	panic("")
@@ -257,15 +267,6 @@ func (e *typeEditor) EditValue(context *TypeEditContext, value reflect.Value) {
 	}
 
 	edFn(context, value)
-}
-
-func (e *typeEditor) addPrimitiveTypes() {
-	e.AddType(new(float32), float32Edit)
-	e.AddType(new(float64), float64Edit)
-	e.AddType(new(bool), boolEdit)
-	e.AddType(new(string), stringEdit)
-	e.AddType(new(int), intEdit)
-	e.AddType(new(asset.Path), pathEd)
 }
 
 // primitive type handler funcs below here

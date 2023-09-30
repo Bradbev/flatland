@@ -1,0 +1,20 @@
+{
+  "Type": "github.com/bradbev/flatland/examples/fruitroids/src/fruitroids.GameFlow",
+  "Parent": "",
+  "Inner": {
+    "Worlds": [
+      {
+        "Type": "github.com/bradbev/flatland/src/flat.World",
+        "Path": "splash.json"
+      },
+      {
+        "Type": "github.com/bradbev/flatland/src/flat.World",
+        "Path": "world.json"
+      },
+      {
+        "Type": "github.com/bradbev/flatland/src/flat.World",
+        "Path": "postsplash.json"
+      }
+    ]
+  }
+}

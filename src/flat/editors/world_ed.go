@@ -126,15 +126,14 @@ func (w *worldEdContext) renderOutliner(context *editor.TypeEditContext, value r
 }
 
 func (w *worldEdContext) actorInlineEd(context *editor.TypeEditContext, value reflect.Value) {
-	editor.StructEd(context, w.valueToEdit)
-	imgui.Separator()
-	for _, c := range w.actorToEdit.GetComponents() {
-		if c == nil {
-			continue
+	flat.WalkComponents(w.actorToEdit, func(target, parent flat.Component) {
+		if target == nil {
+			return
 		}
-		editor.StructEd(context, reflect.ValueOf(c).Elem())
+		editor.StructEd(context, reflect.ValueOf(target).Elem())
 		imgui.Separator()
-	}
+	})
+
 }
 
 func (w *worldEdContext) buildWorldTree() {

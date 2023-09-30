@@ -5,7 +5,7 @@
     "PersistentActors": [
       {
         "Type": "github.com/bradbev/flatland/src/flat.EmptyActor",
-        "Parent": "textactor.json",
+        "Parent": "screenTextActor.json",
         "Inner": {
           "ActorBase": {
             "Components": [
@@ -13,7 +13,7 @@
                 "Type": "github.com/bradbev/flatland/src/flat.ScreenPositionComponent",
                 "Parent": "",
                 "Inner": {
-                  "Anchor": 1,
+                  "Anchor": 4,
                   "ComponentBase": {
                     "Children": [
                       {
@@ -21,7 +21,6 @@
                         "Parent": "",
                         "Inner": {
                           "Color": {
-                            "B": 252,
                             "G": 255,
                             "R": 255
                           },
@@ -33,22 +32,22 @@
                           },
                           "Font": {
                             "Type": "github.com/bradbev/flatland/src/flat.Font",
-                            "Path": "font.json"
+                            "Path": "defaultFont.json"
                           },
-                          "TextTemplate": "FRUITROIDS"
+                          "TextTemplate": "You have died"
                         }
                       }
                     ],
                     "Transform": {
                       "Location": {
-                        "X": 227.5,
-                        "Y": 136.5
+                        "X": 114,
+                        "Y": 190
                       },
                       "ScaleX": 1,
                       "ScaleY": 1
                     }
                   },
-                  "YPercentAwayFromAnchor": 30
+                  "XPercentAwayFromAnchor": -20
                 }
               }
             ]

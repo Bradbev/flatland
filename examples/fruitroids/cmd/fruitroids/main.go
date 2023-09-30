@@ -37,15 +37,13 @@ func main() {
 	// world.json.
 	// Each actor in World.PersistentActors will be loaded and the their various interface functions
 	// added to the World main loop
-	world, err := asset.Load("world.json")
+	flow, err := asset.Load("gameflow.json")
 	flat.Check(err)
 
 	// TOUR:Fruitroids 4
 	// Create an ebiten.Game type, set it up and call RunGame
 	gg := &fruitroids.Fruitroids{}
-	gg.World = world.(*flat.World)
-	fruitroids.ActiveWorld = gg
-	gg.World.BeginPlay()
+	gg.BeginPlay(flow.(*fruitroids.GameFlow))
 
 	ebiten.RunGame(gg)
 }

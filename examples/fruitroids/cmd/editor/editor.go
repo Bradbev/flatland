@@ -31,12 +31,10 @@ func main() {
 	fruitroids.RegisterFruitroidTypes()
 
 	gg.ed.StartGameCallback(func() ebiten.Game {
-		world, err := asset.Load("world.json")
-		fmt.Println(err)
+		flow, err := asset.Load("gameflow.json")
+		flat.Check(err)
 		game := &fruitroids.Fruitroids{}
-		game.World = world.(*flat.World)
-		fruitroids.ActiveWorld = game
-		game.World.BeginPlay()
+		game.BeginPlay(flow.(*fruitroids.GameFlow))
 		return game
 	})
 

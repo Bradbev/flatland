@@ -43,27 +43,37 @@
           }
         },
         {
-          "Type": "github.com/bradbev/flatland/src/flat.TextComponent",
+          "Type": "github.com/bradbev/flatland/src/flat.ScreenPositionComponent",
           "Parent": "",
           "Inner": {
-            "Color": {
-              "A": 255,
-              "B": 255,
-              "G": 255,
-              "R": 255
-            },
             "ComponentBase": {
+              "Children": [
+                {
+                  "Type": "github.com/bradbev/flatland/src/flat.TextComponent",
+                  "Parent": "",
+                  "Inner": {
+                    "Color": {
+                      "G": 255
+                    },
+                    "ComponentBase": {
+                      "Transform": {
+                        "ScaleX": 1,
+                        "ScaleY": 1
+                      }
+                    },
+                    "Font": {
+                      "Type": "github.com/bradbev/flatland/src/flat.Font",
+                      "Path": "font.json"
+                    },
+                    "TextTemplate": "test"
+                  }
+                }
+              ],
               "Transform": {
-                "Rotation": -16,
                 "ScaleX": 1,
                 "ScaleY": 1
               }
-            },
-            "Font": {
-              "Type": "github.com/bradbev/flatland/src/flat.Font",
-              "Path": "font.json"
-            },
-            "TextTemplate": "test"
+            }
           }
         }
       ],

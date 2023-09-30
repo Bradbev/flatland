@@ -6,6 +6,7 @@ import (
 
 	"github.com/bradbev/flatland/src/asset"
 	"github.com/bradbev/flatland/src/flat"
+	"github.com/hajimehoshi/ebiten/v2"
 )
 
 type SpawnConfig struct {
@@ -34,7 +35,8 @@ func (l *LevelSpawn) BeginPlay() {
 				fmt.Println("terrible")
 			}
 			r := a.(*Roid)
-			x, y := rand.Intn(500), rand.Intn(500)
+			w, h := ebiten.WindowSize()
+			x, y := rand.Intn(w), rand.Intn(h)
 			r.Transform.Location.X = float64(x)
 			r.Transform.Location.Y = float64(y)
 
@@ -42,7 +44,7 @@ func (l *LevelSpawn) BeginPlay() {
 			r.velocity.Y = rand.Float64() * toSpawn.SpeedMax
 			r.rotationDelta = rand.Float64()*toSpawn.RotationMax - (toSpawn.RotationMax / 2.0)
 
-			ActiveWorld.World.AddToWorld(r)
+			ActiveWorld.AddToWorld(r)
 		}
 	}
 }

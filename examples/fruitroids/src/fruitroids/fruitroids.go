@@ -8,12 +8,38 @@ import (
 
 	"github.com/hajimehoshi/ebiten/v2"
 	"github.com/hajimehoshi/ebiten/v2/ebitenutil"
+	"github.com/hajimehoshi/ebiten/v2/inpututil"
 )
 
 type Fruitroids struct {
-	w, h  int
-	Flow  *GameFlow
-	World *flat.World
+	w, h     int
+	gameFlow *GameFlow
+
+	score          int
+	scoreComponent *flat.TextComponent
+}
+
+var mainGame *Fruitroids
+
+func (f *Fruitroids) BeginPlay(flow *GameFlow) {
+	mainGame = f
+	f.gameFlow = flow
+	flow.BeginPlay()
+}
+
+func (f *Fruitroids) NextWorld() {
+	f.gameFlow.NextWorld()
+}
+
+func (f *Fruitroids) IncScore(amount int) {
+	f.score += amount
+	if f.scoreComponent != nil {
+		f.scoreComponent.SetValues(f.score)
+	}
+}
+
+func getMainGame() *Fruitroids {
+	return mainGame
 }
 
 type WorldType int
@@ -27,23 +53,77 @@ const (
 type GameFlow struct {
 	Worlds []*flat.World
 
+	index       WorldType
 	activeWorld *flat.World
 }
 
-var ActiveWorld *Fruitroids
+func (g *GameFlow) BeginPlay() {
+	g.index = -1
+	g.NextWorld()
+}
+
+func (g *GameFlow) Draw(screen *ebiten.Image) {
+	if g.activeWorld != nil {
+		g.activeWorld.Draw(screen)
+	}
+}
+
+func (g *GameFlow) Update() {
+	if g.activeWorld != nil {
+		g.activeWorld.Update()
+		if g.index != WorldType_Main {
+			if inpututil.IsKeyJustPressed(ebiten.KeySpace) {
+				g.NextWorld()
+			}
+		}
+	}
+}
+
+func (g *GameFlow) EndMainPlay() {
+	g.NextWorld()
+}
+
+func (g *GameFlow) NextWorld() {
+	if g.activeWorld != nil {
+		g.activeWorld.EndPlay()
+	}
+
+	g.index = (g.index + 1) % (WorldType_Post + 1)
+	g.activeWorld = g.Worlds[g.index]
+	ActiveWorld = g.activeWorld
+	g.activeWorld.BeginPlay()
+
+	if f := getMainGame(); f != nil {
+		f.scoreComponent = nil
+		if f.gameFlow.index == WorldType_Main {
+			flat.ForEachActorByType[*flat.EmptyActor](g.activeWorld, func(actor *flat.EmptyActor) error {
+				for _, textComponent := range flat.FindComponentsByType[*flat.TextComponent](actor) {
+					if textComponent.Name == "Score" {
+						f.scoreComponent = textComponent
+						return flat.StopIterating
+					}
+				}
+				return nil
+			})
+			f.score = 0
+			f.IncScore(0)
+		}
+	}
+}
+
+var ActiveWorld *flat.World
 
 func (g *Fruitroids) Draw(screen *ebiten.Image) {
-
-	if g.World != nil {
-		g.World.Draw(screen)
+	if g.gameFlow != nil {
+		g.gameFlow.Draw(screen)
 	}
 	ebitenutil.DebugPrintAt(screen, fmt.Sprintf("TPS: %.3f\nFPS: %.2f\n", ebiten.ActualTPS(), ebiten.ActualFPS()), 11, 2)
 	ebitenutil.DebugPrintAt(screen, "FRUITROIDS", 11, 30)
 }
 
 func (g *Fruitroids) Update() error {
-	if g.World != nil {
-		g.World.Update()
+	if g.gameFlow != nil {
+		g.gameFlow.Update()
 	}
 	return nil
 }

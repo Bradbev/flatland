@@ -14,6 +14,7 @@ information hiding/abstraction against reflection?
 - some sort of global context for the "world", otherwise objects won't be able to interact with each other.
 
 # Next Goal
+- Hide Component Children in editor
 - Fruitroids game flow - start screen, lives, score, restart
 - Custom debugger for PIE play
 - Asset package needs cleaning, code coverage etc

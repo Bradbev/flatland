@@ -83,7 +83,7 @@ func (s *Ship) handleInput() {
 		}
 		bullet := b.(*Bullet)
 		bullet.Transform = s.Transform
-		ActiveWorld.World.AddToWorld(bullet)
+		ActiveWorld.AddToWorld(bullet)
 		bullet.SetDirection(s.Transform.Rotation)
 	}
 }

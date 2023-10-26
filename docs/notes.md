@@ -1,11 +1,18 @@
 # Open problems
+- How to connect code and data?  The UE solution is blueprints, and/or
+inheritance.
+ - Code registers a named factory func that creates an object
+ `Register[T]("Name", func() {} T)`
+ - Data can connect to code blocks that match the interface
+ - Ha, just register an asset!
+
 - The editor and other systems will be reflection heavy, but typical usage 
 for Go reflection is to ignore unexported symbols.  How can I balance out 
 information hiding/abstraction against reflection?
 
- - Note, reflection can actually read all symbols and with some hackery write them, but that's going to require building things like my own JSON encoder
+- Note, reflection can actually read all symbols and with some hackery write them, but that's going to require building things like my own JSON encoder
 
- - Convention might be easiest, ie, for anything you want to save, but be treated as "private", have a naming convention.
+- Convention might be easiest, ie, for anything you want to save, but be treated as "private", have a naming convention.
 
 - asset.Load vs asset.NewInstance.  Need to clarify the differences and spell out when to use each.  Improved naming for funcs.
 
@@ -14,8 +21,8 @@ information hiding/abstraction against reflection?
 - some sort of global context for the "world", otherwise objects won't be able to interact with each other.
 
 # Next Goal
+- Actor/Component bounds interface
 - Hide Component Children in editor
-- Fruitroids game flow - start screen, lives, score, restart
 - Custom debugger for PIE play
 - Asset package needs cleaning, code coverage etc
 - Clean everything up and decide on how the lines of separation need to be drawn

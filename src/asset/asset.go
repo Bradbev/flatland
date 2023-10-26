@@ -144,6 +144,15 @@ func GetParent(child Asset) Path {
 	return assetManager.GetParent(child)
 }
 
+func GetParentAsset(child Asset) Asset {
+	parentPath := assetManager.GetParent(child)
+	if parentPath == "" {
+		return nil
+	}
+	parent, _ := assetManager.Load(parentPath)
+	return parent
+}
+
 func GetLoadPathForAsset(a Asset) (Path, error) {
 	path, ok := assetManager.AssetToLoadPath[a]
 	if !ok {
@@ -220,4 +229,11 @@ func GetFlatTag(sf *reflect.StructField, key string) (value string, exists bool)
 		}
 	}
 	return "", false
+}
+
+// Create a new T and ensure that T and all it's public fields have their DefaultInitializers called.
+func New[T any]() *T {
+	ret := new(T)
+	callAllDefaultInitializers(ret)
+	return ret
 }

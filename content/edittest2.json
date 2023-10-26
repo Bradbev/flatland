@@ -1,0 +1,21 @@
+{
+  "Type": "main.EditTest2",
+  "Parent": "",
+  "Inner": {
+    "AssetType": {
+      "Type": "github.com/bradbev/flatland/src/flat.TextComponent",
+      "Path": "text.json"
+    },
+    "AssetTypeInline": {
+      "Type": "github.com/bradbev/flatland/src/flat.Font",
+      "Parent": "font.json",
+      "Inner": {
+        "Name": "",
+        "Options": {
+          "Size": 25
+        },
+        "TtfFile": ""
+      }
+    }
+  }
+}

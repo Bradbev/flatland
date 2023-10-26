@@ -11,4 +11,5 @@ func RegisterAllFlatTypes() {
 	asset.RegisterAsset(EmptyActor{})
 	asset.RegisterAsset(TextComponent{})
 	asset.RegisterAsset(ScreenPositionComponent{})
+	asset.RegisterAsset(MouseEventComponent{})
 }

@@ -30,6 +30,15 @@
 			"cwd": "${workspaceRoot}/examples/fruitroids",
 			"program": "examples/fruitroids/cmd/fruitroids/main.go",
 			"args": []
-		}
+		},
+		{
+			"name": "PlaybookEd",
+			"type": "go",
+			"request": "launch",
+			"mode": "debug",
+			"cwd": "${workspaceRoot}/examples/playbook",
+			"program": "examples/playbook/cmd/playbooked/playbooked.go",
+			"args": []
+		},
 	]
 }

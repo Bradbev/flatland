@@ -157,6 +157,7 @@ func (a *assetManagerImpl) toCommonFormatInternal(obj any, context *commonFormat
 	t := reflect.TypeOf(obj)
 	switch t.Kind() {
 	case reflect.Pointer:
+		// Save inline assets
 		if sf := context.Peek(); sf != nil {
 			if _, inline := GetFlatTag(sf, "inline"); inline {
 				container, err := a.toDiskFormat(obj)

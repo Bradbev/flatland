@@ -37,7 +37,10 @@ func main() {
 	edtest.TreeTestInit()
 
 	asset.RegisterAsset(EditTest{})
+	asset.RegisterAsset(EditTest2{})
 	asset.RegisterAsset(actorTest{})
+	asset.RegisterAsset(flat.TestMouseHandler{})
+	asset.RegisterAsset(edtest.UiTestActor{})
 	flat.RegisterAllFlatTypes()
 	editors.RegisterAllFlatEditors(gg.ed)
 
@@ -49,13 +52,15 @@ func main() {
 	// load an asset to be edited by the test editor
 	//asset.Save("testedit.json", &defaultTestObject)
 	//gg.ed.EditAsset("testedit.json")
+	gg.ed.EditAsset("edittest2.json")
 
 	defaultTestObjectChild = defaultTestObject
 	asset.SetParent(&defaultTestObjectChild, &defaultTestObject)
 	//asset.Save("childedit.json", &defaultTestObjectChild)
 	//gg.ed.EditAsset("childedit.json")
 
-	gg.ed.EditAsset("actorTest.json")
+	//	gg.ed.EditAsset("uitestactor.json")
+	//gg.ed.EditAsset("actorTest.json")
 	//gg.ed.EditAsset("font.json")
 	//gg.ed.EditAsset("world.json")
 
@@ -109,12 +114,18 @@ const (
 	Whatever
 )
 
+type EditTest2 struct {
+	AssetType       asset.Asset
+	AssetTypeInline asset.Asset `flat:"inline ; desc:Name Change"`
+}
+
 // EditTest demonstrates all the ways that the editor can
 // edit types.
 type EditTest struct {
 	TestEnum        TestEnum
 	AssetType       asset.Asset // support setting Assets
-	RestrictedTypes *EditTest
+	RestrictedTypes *EditTest   // only show assets of type EditTest
+	AssetTypeInline asset.Asset `flat:"inline"`
 	Flt             float32
 	Slice           []int
 	Array           [3]float32
@@ -170,6 +181,8 @@ func (g *G) showTestControls() {
 
 func (g *G) Draw(screen *ebiten.Image) {
 	ebitenutil.DebugPrintAt(screen, fmt.Sprintf("TPS: %.3f\nFPS: %.2f\n", ebiten.ActualTPS(), ebiten.ActualFPS()), 11, 20)
+	x, y := ebiten.CursorPosition()
+	ebitenutil.DebugPrintAt(screen, fmt.Sprintf("%d,%d", x, y), 80, 20)
 	g.mgr.Draw(screen)
 }
 

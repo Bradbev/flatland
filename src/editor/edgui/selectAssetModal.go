@@ -5,6 +5,7 @@ import (
 	"strings"
 
 	"github.com/bradbev/flatland/src/asset"
+	"github.com/bradbev/flatland/src/flat"
 	"github.com/inkyblackness/imgui-go/v4"
 	"golang.org/x/exp/slices"
 )
@@ -108,4 +109,45 @@ func (s *SelectAssetModal) DrawWithExtraHeaderUI(headerHook func()) bool {
 		s.list.Draw(s.Title, s)
 	}
 	return okPressed
+}
+
+type SelectParentModal struct {
+	selectModal SelectAssetModal
+	target      asset.Asset
+	targetPath  asset.Path
+}
+
+func NewSelectParentModel(targetPath asset.Path, target asset.Asset) *SelectParentModal {
+	return &SelectParentModal{
+		selectModal: SelectAssetModal{
+			Title: "Select Parent",
+			Type:  reflect.TypeOf(target),
+		},
+		target:     target,
+		targetPath: targetPath,
+	}
+}
+
+func (s *SelectParentModal) Open() {
+	s.selectModal.Open()
+}
+
+func (s *SelectParentModal) Draw() bool {
+	if s.selectModal.DrawWithExtraHeaderUI(func() {
+		imgui.SameLine()
+		if imgui.Button("Set No Parent") {
+			asset.SetParent(s.target, nil)
+			imgui.CloseCurrentPopup()
+		}
+	}) {
+		newParentPath := s.selectModal.SelectedPath()
+		currentParentPath := asset.GetParent(s.target)
+		if string(s.targetPath) != newParentPath && newParentPath != string(currentParentPath) {
+			newParent, err := asset.Load(asset.Path(newParentPath))
+			flat.Check(err)
+			asset.SetParent(s.target, newParent)
+			return true
+		}
+	}
+	return false
 }

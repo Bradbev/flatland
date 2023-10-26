@@ -38,6 +38,7 @@ func fontEd(context *editor.TypeEditContext, value reflect.Value) error {
 		context.Edit(f)
 	}
 
+	imgui.Text("Font Preview")
 	imgui.DragInt("X", &c.x)
 	imgui.DragInt("Y", &c.y)
 	imgui.InputText("Text", &c.testText)

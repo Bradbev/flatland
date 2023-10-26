@@ -1,0 +1,33 @@
+{
+  "Type": "github.com/bradbev/flatland/cmd/editor/edtest.UiTestActor",
+  "Parent": "",
+  "Inner": {
+    "ActorBase": {
+      "Components": [
+        {
+          "Type": "github.com/bradbev/flatland/src/flat.MouseEventComponent",
+          "Parent": "",
+          "Inner": {
+            "ComponentBase": {
+              "Transform": {
+                "ScaleX": 1,
+                "ScaleY": 1
+              }
+            },
+            "EventHandler": {
+              "Type": "github.com/bradbev/flatland/src/flat.TestMouseHandler",
+              "Parent": "testmousehandler.json",
+              "Inner": {
+                "ToPrint": "something"
+              }
+            }
+          }
+        }
+      ],
+      "Transform": {
+        "ScaleX": 1,
+        "ScaleY": 1
+      }
+    }
+  }
+}

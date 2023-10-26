@@ -36,6 +36,8 @@ type TypeEditContext struct {
 	structFieldStack []*reflect.StructField
 
 	hasChanged bool
+
+	editAgainInline bool
 }
 
 func NewTypeEditContext(ed *ImguiEditor, assetPath string, target asset.Asset) *TypeEditContext {
@@ -251,14 +253,14 @@ func (e *typeEditor) EditValue(context *TypeEditContext, value reflect.Value) {
 			edFn = StructEd
 
 		case reflect.Array:
-			fallthrough
+			edFn = sliceAndArrayEd
 		case reflect.Slice:
-			edFn = sliceEd
+			edFn = sliceAndArrayEd
 
 		case reflect.Pointer:
-			fallthrough
+			edFn = interfaceAndPointerEd
 		case reflect.Interface:
-			edFn = interfaceEd
+			edFn = interfaceAndPointerEd
 		}
 	}
 
@@ -357,37 +359,110 @@ func makeEnumEd(ed *ImguiEditor, typ reflect.Type) TypeEditorFn {
 }
 
 type interfaceEdContext struct {
-	auto      *edgui.AutoComplete
-	input     string
-	lastInput string
+	auto              *edgui.AutoComplete
+	input             string
+	lastInput         string
+	parentPath        string
+	selectParentModal *edgui.SelectParentModal
 }
 
-func interfaceEd(context *TypeEditContext, value reflect.Value) error {
+func interfaceAndPointerEd(context *TypeEditContext, value reflect.Value) error {
+	c, firstTime := GetContext[interfaceEdContext](context, value)
+	_, isInline := asset.GetFlatTag(context.StructField(), "inline")
+
 	onActivated := func() []string {
-		items, _ := asset.FilterFilesByReflectType(value.Type())
-		return items
+		if isInline {
+			items := []string{}
+			for _, desc := range asset.FilterAssetDescriptorsByReflectType(value.Type()) {
+				items = append(items, desc.Name)
+			}
+			return items
+		} else {
+			items, _ := asset.FilterFilesByReflectType(value.Type())
+			return items
+		}
 	}
 
-	c, firstTime := GetContext[interfaceEdContext](context, value)
 	if firstTime {
 		c.auto = &edgui.AutoComplete{}
 		if !value.IsNil() {
-			path, err := asset.GetLoadPathForAsset(value.Interface())
-			if err == nil {
+			if isInline {
+				desc := asset.GetDescriptorForAsset(value.Interface())
+				c.input = desc.Name
+				c.parentPath = string(asset.GetParent(value.Interface()))
+			} else {
+				path, _ := asset.GetLoadPathForAsset(value.Interface())
 				c.input = string(path)
-				c.lastInput = c.input
 			}
+			c.lastInput = c.input
 		}
 	}
 	withID(value, func() {
-		c.auto.InputText("", &c.input, onActivated)
-		if c.input != c.lastInput { // need a better check here for "input entered"
-			c.lastInput = c.input
-			asset, err := asset.Load(asset.Path(c.input))
-			if err == nil && asset != nil {
-				value.Set(reflect.ValueOf(asset))
-				context.SetChanged()
+		if !isInline {
+			// The not inline case is generally the most common - we just
+			// need to select an asset by file
+			c.auto.InputText("", &c.input, onActivated)
+			if c.input != c.lastInput { // need a better check here for "input entered"
+				c.lastInput = c.input
+				loaded, err := asset.Load(asset.Path(c.input))
+				if err == nil && loaded != nil {
+					value.Set(reflect.ValueOf(loaded))
+					context.SetChanged()
+				}
 			}
+		} else {
+			// The inline case is more complex.  We get called twice by StructEd, once with
+			// editAgainInline false, which is just an InputText and will be in the right
+			// column of the StructEdit.
+			if !context.editAgainInline {
+				c.auto.InputText("", &c.input, onActivated)
+				if c.input != c.lastInput { // need a better check here for "input entered"
+					c.lastInput = c.input
+					for _, desc := range asset.FilterAssetDescriptorsByReflectType(value.Type()) {
+						if desc.Name == c.input {
+							if inst, err := desc.Create(); err == nil {
+								value.Set(reflect.ValueOf(inst))
+								context.SetChanged()
+								c.parentPath = string(asset.GetParent(value.Interface()))
+								break
+							}
+						}
+					}
+				}
+			}
+			// if value is !nil, then we have selected a type and created an object of that type to edit
+			if !value.IsNil() {
+				// If being edited again, then StructEd has disbled the table and we are taking the
+				// whole width of the edit box.
+				if context.editAgainInline {
+					valueAsAsset := value.Interface().(asset.Asset)
+					parentPath := asset.GetParent(valueAsAsset)
+
+					var buttonText, labelText string
+					if parentPath == "" {
+						buttonText = "Set Parent"
+						labelText = ""
+					} else {
+						buttonText = "Change Parent"
+						labelText = fmt.Sprintf("Parent: %s", parentPath)
+					}
+					imgui.Indent()
+					if imgui.Button(buttonText) {
+						c.selectParentModal = edgui.NewSelectParentModel("", valueAsAsset)
+						c.selectParentModal.Open()
+					}
+					imgui.SameLine()
+					imgui.Text(labelText)
+					imgui.Unindent()
+					// why don't overrides work here?
+					context.Edit(value.Interface())
+				} else {
+					context.editAgainInline = true
+				}
+			}
+		}
+		if c.selectParentModal != nil {
+			c.selectParentModal.Draw()
 		}
 	})
 	return nil
@@ -397,6 +472,14 @@ func StructEd(context *TypeEditContext, value reflect.Value) error {
 	t := value.Type()
 	if t.Kind() != reflect.Struct {
 		logger.Fatalf("Not a struct - %v", t.Kind())
+	}
+
+	editInline := func(tableName string, field reflect.Value) {
+		imgui.EndTable()
+		imgui.Unindent()
+		context.EditValue(field.Addr())
+		imgui.Indent()
+		imgui.BeginTable(tableName, 2)
 	}
 
 	treeNodeName := getNodeName(context, value)
@@ -415,38 +498,50 @@ func StructEd(context *TypeEditContext, value reflect.Value) error {
 					case reflect.Slice:
 						fallthrough
 					case reflect.Struct:
-						// structs are a new TreeNode
-						// End the current table, edit the value
-						// in a new tree node and then Begin the table again
-						imgui.EndTable()
-						context.EditValue(field.Addr())
-						imgui.BeginTable(treeNodeName+"##table", 2)
+						// structs, arrays, slices are edited inline as
+						// a new TreeNode
+						// End the current table, edit the value in a new tree
+						// node and then Begin the table again
+						editInline(treeNodeName+"##table", field)
 
 					default:
-						imgui.TableNextRow()
-						imgui.TableNextColumn()
-
-						{ // Handle field name overrides
-							fieldName := structField.Name
-							if override, ok := asset.GetFlatTag(&structField, "desc"); ok {
-								fieldName = override
+						//_, isInline := asset.GetFlatTag(context.StructField(), "inline")
+						isEditingInline := false //isInline && !field.IsNil()
+						if structField.Type.Kind() == reflect.Pointer ||
+							structField.Type.Kind() == reflect.Interface {
+							if !field.IsNil() {
+								//path, _ := asset.GetLoadPathForAsset(field.Interface().(asset.Asset))
+								//isEditingInline = path == ""
 							}
-							imgui.Text(fieldName)
 						}
 
+						imgui.TableNextRow()
 						imgui.TableNextColumn()
-						context.EditValue(field.Addr())
+						if isEditingInline {
+							editInline(treeNodeName+"##table", field)
+						} else {
+							// Handle field name overrides
+							imgui.Text(getNodeName(context, field))
 
-						// revert button
-						if asset.ChildOverridesField(context.targetAsset, context.FieldPathStackName()) {
-							imgui.SameLine()
-							if imgui.Button("¬") {
-								asset.SetChildOverrideForField(context.targetAsset, context.FieldPathStackName(), asset.OverrideDisable)
+							imgui.TableNextColumn()
+							context.editAgainInline = false
+							context.EditValue(field.Addr())
+							if context.editAgainInline {
+								//						editInline(treeNodeName+"##table", field)
+								context.EditValue(field.Addr())
 							}
-							if imgui.IsItemHovered() {
-								imgui.BeginTooltip()
-								imgui.Text("Revert to parent value")
-								imgui.EndTooltip()
+
+							// revert button
+							if asset.ChildOverridesField(context.targetAsset, context.FieldPathStackName()) {
+								imgui.SameLine()
+								if imgui.Button("¬") {
+									asset.SetChildOverrideForField(context.targetAsset, context.FieldPathStackName(), asset.OverrideDisable)
+								}
+								if imgui.IsItemHovered() {
+									imgui.BeginTooltip()
+									imgui.Text("Revert to parent value")
+									imgui.EndTooltip()
+								}
 							}
 						}
 					}
@@ -481,7 +576,7 @@ func getNodeName(context *TypeEditContext, value reflect.Value) string {
 	return nodeName
 }
 
-func sliceEd(context *TypeEditContext, value reflect.Value) error {
+func sliceAndArrayEd(context *TypeEditContext, value reflect.Value) error {
 	t := value.Type()
 	isSlice := t.Kind() == reflect.Slice
 	isArray := t.Kind() == reflect.Array

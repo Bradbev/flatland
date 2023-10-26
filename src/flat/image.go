@@ -85,3 +85,12 @@ func (c *ImageComponent) Draw(screen *ebiten.Image) {
 		screen.DrawImage(c.Image.GetImage(), &op)
 	}
 }
+
+func (c *ImageComponent) Bounds() image.Rectangle {
+	g := c.op.GeoM
+	ApplyComponentTransforms(c, &g)
+	minX, minY := g.Apply(-c.dimensions.X/2.0, -c.dimensions.Y/2.0)
+	maxX, maxY := minX+c.dimensions.X, minY+c.dimensions.Y
+
+	return image.Rect(int(minX), int(minY), int(maxX), int(maxY))
+}

@@ -67,6 +67,10 @@ func (c *TypeEditContext) GetContext(key reflect.Value) {
 
 func (c *TypeEditContext) SetChanged() {
 	c.hasChanged = true
+	if asset.GetParent(c.targetAsset) != "" {
+		fieldPath := c.FieldPathStackName()
+		asset.SetChildOverrideForField(c.targetAsset, fieldPath, asset.OverrideEnable)
+	}
 }
 
 // EditValue allows the custom type editors to edit sub parts
@@ -330,7 +334,6 @@ func makeCustomInterfaceEd(pairs []ifaceFnPair, typeName string) TypeEditorFn {
 }
 
 type enumEdContext struct {
-	comboIndex int32
 	comboItems []string
 }
 
@@ -342,12 +345,12 @@ func makeEnumEd(ed *ImguiEditor, typ reflect.Type) TypeEditorFn {
 		c, firstTime := GetContext[enumEdContext](context, value)
 		if firstTime {
 			c.comboItems = ed.knownEnums.Strings(typ)
-			name := ed.knownEnums.ValueToString(typ, int32(value.Int()))
-			c.comboIndex = int32(slices.Index(c.comboItems, name))
 		}
 		withID(value, func() {
-			if imgui.Combo("", &c.comboIndex, c.comboItems) {
-				name := c.comboItems[c.comboIndex]
+			name := ed.knownEnums.ValueToString(typ, int32(value.Int()))
+			comboIndex := int32(slices.Index(c.comboItems, name))
+			if imgui.Combo("", &comboIndex, c.comboItems) {
+				name := c.comboItems[comboIndex]
 				enumValue := ed.knownEnums.StringToValue(typ, name)
 				value.SetInt(int64(enumValue))
 				context.SetChanged()
@@ -461,6 +464,7 @@ func interfaceAndPointerEd(context *TypeEditContext, value reflect.Value) error 
 						imgui.Text(labelText)
 						imgui.Unindent()
 					}
+					c.contextForInline.hasChanged = false
 					c.contextForInline.EditValue(value.Elem())
 					if c.contextForInline.hasChanged {
 						context.SetChanged()
@@ -537,7 +541,6 @@ func StructEd(context *TypeEditContext, value reflect.Value) error {
 							context.editAgainInline = false
 							context.EditValue(field.Addr())
 							if context.editAgainInline {
-								imgui.Text("ffff")
 								editInline(treeNodeName+"##table", field)
 							}
 
@@ -545,8 +548,8 @@ func StructEd(context *TypeEditContext, value reflect.Value) error {
 							if asset.ChildOverridesField(context.targetAsset, context.FieldPathStackName()) {
 								imgui.SameLine()
 								if imgui.Button("¬") {
-									asset.SetChildOverrideForField(context.targetAsset, context.FieldPathStackName(), asset.OverrideDisable)
 									context.SetChanged()
+									asset.SetChildOverrideForField(context.targetAsset, context.FieldPathStackName(), asset.OverrideDisable)
 								}
 								if imgui.IsItemHovered() {
 									imgui.BeginTooltip()

@@ -364,6 +364,7 @@ type interfaceEdContext struct {
 	lastInput         string
 	parentPath        string
 	selectParentModal *edgui.SelectParentModal
+	contextForInline  *TypeEditContext
 }
 
 func interfaceAndPointerEd(context *TypeEditContext, value reflect.Value) error {
@@ -385,6 +386,7 @@ func interfaceAndPointerEd(context *TypeEditContext, value reflect.Value) error 
 
 	if firstTime {
 		c.auto = &edgui.AutoComplete{}
+		c.contextForInline = NewTypeEditContext(context.Ed, "", value.Interface().(asset.Asset))
 		if !value.IsNil() {
 			if isInline {
 				desc := asset.GetDescriptorForAsset(value.Interface())
@@ -407,6 +409,7 @@ func interfaceAndPointerEd(context *TypeEditContext, value reflect.Value) error 
 				loaded, err := asset.Load(asset.Path(c.input))
 				if err == nil && loaded != nil {
 					value.Set(reflect.ValueOf(loaded))
+					c.contextForInline = NewTypeEditContext(context.Ed, "", loaded)
 					context.SetChanged()
 				}
 			}
@@ -422,6 +425,7 @@ func interfaceAndPointerEd(context *TypeEditContext, value reflect.Value) error 
 						if desc.Name == c.input {
 							if inst, err := desc.Create(); err == nil {
 								value.Set(reflect.ValueOf(inst))
+								c.contextForInline = NewTypeEditContext(context.Ed, "", inst)
 								context.SetChanged()
 								c.parentPath = string(asset.GetParent(value.Interface()))
 								break
@@ -446,16 +450,22 @@ func interfaceAndPointerEd(context *TypeEditContext, value reflect.Value) error 
 						buttonText = "Change Parent"
 						labelText = fmt.Sprintf("Parent: %s", parentPath)
 					}
-					imgui.Indent()
-					if imgui.Button(buttonText) {
-						c.selectParentModal = edgui.NewSelectParentModel("", valueAsAsset)
-						c.selectParentModal.Open()
+
+					{ // Select parent line
+						imgui.Indent()
+						if imgui.Button(buttonText) {
+							c.selectParentModal = edgui.NewSelectParentModel("", valueAsAsset)
+							c.selectParentModal.Open()
+						}
+						imgui.SameLine()
+						imgui.Text(labelText)
+						imgui.Unindent()
 					}
-					imgui.SameLine()
-					imgui.Text(labelText)
-					imgui.Unindent()
-					// why don't overrides work here?
-					context.Edit(value.Interface())
+					c.contextForInline.EditValue(value.Elem())
+					if c.contextForInline.hasChanged {
+						context.SetChanged()
+					}
+
 				} else {
 					context.editAgainInline = true
 				}
@@ -527,8 +537,8 @@ func StructEd(context *TypeEditContext, value reflect.Value) error {
 							context.editAgainInline = false
 							context.EditValue(field.Addr())
 							if context.editAgainInline {
-								//						editInline(treeNodeName+"##table", field)
-								context.EditValue(field.Addr())
+								imgui.Text("ffff")
+								editInline(treeNodeName+"##table", field)
 							}
 
 							// revert button
@@ -536,6 +546,7 @@ func StructEd(context *TypeEditContext, value reflect.Value) error {
 								imgui.SameLine()
 								if imgui.Button("¬") {
 									asset.SetChildOverrideForField(context.targetAsset, context.FieldPathStackName(), asset.OverrideDisable)
+									context.SetChanged()
 								}
 								if imgui.IsItemHovered() {
 									imgui.BeginTooltip()

@@ -230,9 +230,9 @@ func (a *assetManagerImpl) SetParent(child Asset, parent Asset) error {
 	}
 
 	a.ChildToParent[child] = parentPath
-	//	if hadParent {
-	a.refreshParentValuesForChild(child, parentPath)
-	//}
+	if hadParent {
+		a.refreshParentValuesForChild(child, parentPath)
+	}
 
 	return nil
 }

@@ -10,11 +10,10 @@
       "Type": "github.com/bradbev/flatland/src/flat.Font",
       "Parent": "font.json",
       "Inner": {
-        "Name": "",
+        "Name": "Arcade",
         "Options": {
-          "Size": 25
-        },
-        "TtfFile": ""
+          "Size": 11
+        }
       }
     }
   }

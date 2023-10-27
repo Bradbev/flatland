@@ -406,3 +406,40 @@ func TestParentLoadingSavingSetting(t *testing.T) {
 		assert.Equal(t, expected, child.Children[0])
 	}
 }
+
+type testAssetInlineParent struct {
+	Inlined Asset `flat:"inline"`
+}
+
+type testInlinedAsset struct {
+	Field string
+}
+
+func TestInlineAssetsWithParents(t *testing.T) {
+	rootFS := newWriteFS()
+	reset := func() {
+		ResetForTest()
+		RegisterFileSystem(rootFS.fs, 0)
+		RegisterWritableFileSystem(rootFS)
+		RegisterAsset(testAssetInlineParent{})
+		RegisterAsset(testInlinedAsset{})
+	}
+	{
+		reset()
+		parent := testInlinedAsset{Field: "parent"}
+		Save("parent.json", &parent)
+
+		desc := GetDescriptorForAsset(&parent)
+		inlinedChild, err := desc.Create()
+		inlinedChild.(*testInlinedAsset).Field = ""
+		assert.NoError(t, err)
+		container := testAssetInlineParent{Inlined: inlinedChild}
+		SetParent(inlinedChild, &parent)
+		fmt.Printf("Child %x\n", &container)
+		for k, v := range assetManager.ChildAssetOverrides {
+			fmt.Printf("k %x v: %v\n", k, v)
+		}
+		assert.True(t, ChildOverridesField(inlinedChild, "Field"))
+
+	}
+}
